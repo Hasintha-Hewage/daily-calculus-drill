@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Daily Calculus Drill",
+    "slug": "daily-calculus-drill",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "dailycalculus",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dailycalculus.drill"
+    },
+    "android": {
+      "package": "com.dailycalculus.drill"
+    },
+    "plugins": [
+      "expo-sqlite",
+      [
+        "expo-notifications",
+        {
+          "color": "#6366F1"
+        }
+      ],
+      "expo-asset",
+      "expo-font"
+    ]
+  }
+}
