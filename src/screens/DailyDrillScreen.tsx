@@ -13,10 +13,19 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { DIFFICULTY_PROFILES } from '../ai/localMathAIModel';
 import { MathKeyboardToolbar } from '../components/MathKeyboardToolbar';
 import { MathRenderer } from '../components/MathRenderer';
 import { useDrill } from '../context/DrillContext';
+import { SkillDifficulty } from '../types';
 import { userInputToLatex } from '../utils/mathVerifier';
+
+const DIFFICULTY_OPTIONS: SkillDifficulty[] = [
+  'BEGINNER',
+  'INTERMEDIATE',
+  'ADVANCED',
+  'MASTER',
+];
 
 export const DailyDrillScreen: React.FC = () => {
   const {
@@ -27,6 +36,8 @@ export const DailyDrillScreen: React.FC = () => {
     elapsedSeconds,
     submitAnswer,
     giveUpToday,
+    changeDifficulty,
+    generateNewAIProblem,
   } = useDrill();
 
   const [answerInput, setAnswerInput] = useState<string>('');
@@ -77,6 +88,21 @@ export const DailyDrillScreen: React.FC = () => {
     setAnswerInput('');
   };
 
+  const handleSelectDifficulty = async (diff: SkillDifficulty) => {
+    setFeedbackMessage(null);
+    setAnswerInput('');
+    setShowHint(false);
+    await changeDifficulty(diff);
+  };
+
+  const handleGenerateNewAI = async () => {
+    setFeedbackMessage(null);
+    setAnswerInput('');
+    setShowHint(false);
+    setShowSuccessModal(false);
+    await generateNewAIProblem();
+  };
+
   const handleSubmit = async () => {
     if (!todayDrill || todayDrill.status !== 'PENDING') return;
 
@@ -92,7 +118,7 @@ export const DailyDrillScreen: React.FC = () => {
         outcome.verification.errorMessage || 'Incorrect expression.';
       if (outcome.statusAfterAttempt === 'FAILED') {
         setFeedbackMessage(
-          'Out of attempts for today. Review the solution below and try again tomorrow!'
+          'Out of attempts. Review the solution below or tap "New AI Question" to practice more!'
         );
       } else {
         setFeedbackMessage(
@@ -108,7 +134,7 @@ export const DailyDrillScreen: React.FC = () => {
     if (!todayDrill || todayDrill.status !== 'PENDING') return;
     await giveUpToday();
     setFeedbackMessage(
-      'Marked as FAILED for today. Study the canonical answer below!'
+      'Marked as FAILED. Study the canonical answer below or generate a new AI question!'
     );
   };
 
@@ -122,7 +148,9 @@ export const DailyDrillScreen: React.FC = () => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#6366F1" />
-        <Text style={styles.loadingText}>Loading Today&apos;s Calculus Drill...</Text>
+        <Text style={styles.loadingText}>
+          Synthesizing Personalized AI Calculus Drill...
+        </Text>
       </View>
     );
   }
@@ -140,13 +168,11 @@ export const DailyDrillScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Top Header: Level & Streak Badges */}
+        {/* Top Header: Level, Timer & Streak Badges */}
         <View style={styles.headerRow}>
           <View style={styles.levelBadge}>
             <Ionicons name="school-outline" size={18} color="#818CF8" />
-            <Text style={styles.levelBadgeText}>
-              LEVEL {todayDrill.level}
-            </Text>
+            <Text style={styles.levelBadgeText}>LEVEL {todayDrill.level}</Text>
           </View>
 
           <View style={styles.timerChip}>
@@ -162,6 +188,63 @@ export const DailyDrillScreen: React.FC = () => {
           </View>
         </View>
 
+        {/* User Skill Experience / Difficulty Selector */}
+        <View style={styles.difficultyCard}>
+          <View style={styles.difficultyHeaderRow}>
+            <View style={styles.difficultyTitleWrap}>
+              <Ionicons name="sparkles" size={15} color="#A5B4FC" />
+              <Text style={styles.difficultyTitle}>
+                YOUR EXPERIENCE LEVEL (LOCAL AI)
+              </Text>
+            </View>
+            <Text style={styles.ratingText}>
+              Skill Elo: {progress.skill_rating}
+            </Text>
+          </View>
+
+          <View style={styles.difficultyPillsRow}>
+            {DIFFICULTY_OPTIONS.map((diffKey) => {
+              const cfg = DIFFICULTY_PROFILES[diffKey];
+              const isSelected = progress.selected_difficulty === diffKey;
+              return (
+                <TouchableOpacity
+                  key={diffKey}
+                  style={[
+                    styles.diffPill,
+                    isSelected && styles.diffPillActive,
+                  ]}
+                  onPress={() => handleSelectDifficulty(diffKey)}
+                  activeOpacity={0.75}
+                >
+                  <Text
+                    style={[
+                      styles.diffPillText,
+                      isSelected && styles.diffPillTextActive,
+                    ]}
+                  >
+                    {cfg.shortLabel}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* AI Reasoning & Refresh Row */}
+          <View style={styles.aiInsightRow}>
+            <Text style={styles.aiReasoningText} numberOfLines={2}>
+              {todayProblem.aiReasoning}
+            </Text>
+            <TouchableOpacity
+              style={styles.newAiBtn}
+              onPress={handleGenerateNewAI}
+              activeOpacity={0.75}
+            >
+              <Ionicons name="refresh" size={14} color="#38BDF8" />
+              <Text style={styles.newAiBtnText}>New AI Q</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Category & Date Subheader */}
         <View style={styles.metaRow}>
           <Text style={styles.categoryTag}>{todayProblem.category}</Text>
@@ -174,7 +257,7 @@ export const DailyDrillScreen: React.FC = () => {
           <View style={styles.equationBox}>
             <MathRenderer
               latex={todayProblem.problemLatex}
-              fontSize={30}
+              fontSize={28}
               color="#F8FAFC"
               height={95}
             />
@@ -208,7 +291,7 @@ export const DailyDrillScreen: React.FC = () => {
           <View style={styles.hintToggleLeft}>
             <Ionicons name="bulb-outline" size={18} color="#FBBF24" />
             <Text style={styles.hintToggleText}>
-              {showHint ? 'Hide Calculus Hint' : 'Need a Hint?'}
+              {showHint ? 'Hide AI Step-by-Step Hint' : 'Need an AI Hint?'}
             </Text>
           </View>
           <Ionicons
@@ -339,8 +422,8 @@ export const DailyDrillScreen: React.FC = () => {
 
             <Text style={styles.resultSubtext}>
               {todayDrill.status === 'SOLVED'
-                ? `Awesome work! You advanced to Level ${progress.current_level} for tomorrow's drill.`
-                : `You'll stay at Level ${progress.current_level} and get a fresh challenge tomorrow at 07:00 AM.`}
+                ? `Awesome work! Your AI Skill Rating is now ${progress.skill_rating} and you advanced to Level ${progress.current_level}.`
+                : `Your AI Skill Rating adjusted to ${progress.skill_rating}. Review the canonical answer below or generate another AI puzzle!`}
             </Text>
 
             <View style={styles.canonicalSolutionBox}>
@@ -355,6 +438,17 @@ export const DailyDrillScreen: React.FC = () => {
                 Input form: {todayProblem.correctAnswer}
               </Text>
             </View>
+
+            <TouchableOpacity
+              style={styles.practiceAnotherBtn}
+              onPress={handleGenerateNewAI}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="sparkles-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.practiceAnotherBtnText}>
+                Generate Next Adaptive AI Problem
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
       </ScrollView>
@@ -387,9 +481,16 @@ export const DailyDrillScreen: React.FC = () => {
               <View style={styles.modalStatDivider} />
               <View style={styles.modalStatItem}>
                 <Text style={styles.modalStatValue}>
+                  {progress.skill_rating} ⚡
+                </Text>
+                <Text style={styles.modalStatLabel}>AI Skill Rating</Text>
+              </View>
+              <View style={styles.modalStatDivider} />
+              <View style={styles.modalStatItem}>
+                <Text style={styles.modalStatValue}>
                   {progress.streak} 🔥
                 </Text>
-                <Text style={styles.modalStatLabel}>Day Streak</Text>
+                <Text style={styles.modalStatLabel}>Streak</Text>
               </View>
             </View>
 
@@ -480,6 +581,96 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 13,
     letterSpacing: 0.5,
+  },
+  difficultyCard: {
+    backgroundColor: '#1E293B',
+    borderRadius: 16,
+    padding: 13,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 14,
+  },
+  difficultyHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  difficultyTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  difficultyTitle: {
+    color: '#A5B4FC',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+  },
+  ratingText: {
+    color: '#38BDF8',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  difficultyPillsRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 10,
+  },
+  diffPill: {
+    flex: 1,
+    backgroundColor: '#0F172A',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 10,
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  diffPillActive: {
+    backgroundColor: 'rgba(99, 102, 241, 0.25)',
+    borderColor: '#6366F1',
+  },
+  diffPillText: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  diffPillTextActive: {
+    color: '#F8FAFC',
+    fontWeight: '800',
+  },
+  aiInsightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    backgroundColor: '#0F172A',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  aiReasoningText: {
+    flex: 1,
+    color: '#CBD5E1',
+    fontSize: 11.5,
+    lineHeight: 16,
+  },
+  newAiBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(56, 189, 248, 0.14)',
+    borderWidth: 1,
+    borderColor: '#38BDF8',
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  newAiBtnText: {
+    color: '#38BDF8',
+    fontSize: 11,
+    fontWeight: '700',
   },
   metaRow: {
     flexDirection: 'row',
@@ -696,6 +887,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderWidth: 1,
     borderColor: '#334155',
+    marginBottom: 14,
   },
   canonicalLabel: {
     fontSize: 11,
@@ -709,6 +901,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     marginTop: 4,
+  },
+  practiceAnotherBtn: {
+    backgroundColor: '#6366F1',
+    borderRadius: 12,
+    paddingVertical: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  practiceAnotherBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
   modalBackdrop: {
     flex: 1,
@@ -753,7 +959,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0F172A',
     borderRadius: 14,
     paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingHorizontal: 14,
     width: '100%',
     justifyContent: 'space-around',
     marginBottom: 20,
@@ -763,12 +969,12 @@ const styles = StyleSheet.create({
   },
   modalStatValue: {
     color: '#F8FAFC',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
   },
   modalStatLabel: {
     color: '#94A3B8',
-    fontSize: 12,
+    fontSize: 11,
     marginTop: 2,
   },
   modalStatDivider: {

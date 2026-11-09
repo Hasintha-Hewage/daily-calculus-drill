@@ -9,11 +9,13 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { DIFFICULTY_PROFILES } from '../ai/localMathAIModel';
 import { useDrill } from '../context/DrillContext';
 import {
   formatNotificationTime,
   sendTestDrillNotification,
 } from '../services/notificationService';
+import { CalculusTopicKey, SkillDifficulty } from '../types';
 
 const TIME_PRESETS = [
   { label: '06:30 AM', hour: 6, minute: 30 },
@@ -22,9 +24,27 @@ const TIME_PRESETS = [
   { label: '09:00 AM', hour: 9, minute: 0 },
 ];
 
+const DIFFICULTY_LIST: SkillDifficulty[] = [
+  'BEGINNER',
+  'INTERMEDIATE',
+  'ADVANCED',
+  'MASTER',
+];
+
+const TOPIC_LABELS: { key: CalculusTopicKey; label: string }[] = [
+  { key: 'polynomial', label: 'Power Rule & Polynomials' },
+  { key: 'trig', label: 'Trigonometric Functions' },
+  { key: 'exponential', label: 'Exponential Functions' },
+  { key: 'logarithmic', label: 'Logarithmic Functions' },
+  { key: 'product_quotient', label: 'Product, Quotient & U-Sub' },
+  { key: 'chain_by_parts', label: 'Chain Rule & Integration by Parts' },
+];
+
 export const SettingsScreen: React.FC = () => {
   const {
     progress,
+    topicMastery,
+    changeDifficulty,
     updateReminderSchedule,
     exportBackupJson,
     resetProgressData,
@@ -44,6 +64,13 @@ export const SettingsScreen: React.FC = () => {
 
   const adjustMinute = (delta: number) => {
     setSelectedMinute((prev) => (prev + delta + 60) % 60);
+  };
+
+  const handleDifficultyChange = async (diff: SkillDifficulty) => {
+    await changeDifficulty(diff);
+    setStatusBanner(
+      `AI Experience Profile set to ${DIFFICULTY_PROFILES[diff].label}. A new problem is ready!`
+    );
   };
 
   const handleSaveSchedule = async () => {
@@ -77,7 +104,7 @@ export const SettingsScreen: React.FC = () => {
         title: 'Daily Calculus Drill Backup',
         message: jsonBackup,
       });
-    } catch (error) {
+    } catch {
       Alert.alert('Backup Error', 'Could not export backup data.');
     }
   };
@@ -85,7 +112,7 @@ export const SettingsScreen: React.FC = () => {
   const handleResetProgress = () => {
     Alert.alert(
       'Reset All Progress?',
-      'This will permanently clear your drill history, reset your streak to 0, and return you to Level 1.',
+      'This will permanently clear your drill history, reset your streak and AI mastery profile, and return you to Level 1.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -93,7 +120,7 @@ export const SettingsScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             await resetProgressData();
-            setStatusBanner('Progress has been reset back to Level 1.');
+            setStatusBanner('Progress and AI profile reset back to Level 1.');
           },
         },
       ]
@@ -111,6 +138,94 @@ export const SettingsScreen: React.FC = () => {
           <Text style={styles.statusBannerText}>{statusBanner}</Text>
         </View>
       )}
+
+      {/* Local AI Experience & Topic Mastery Card */}
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Ionicons name="sparkles-outline" size={22} color="#A5B4FC" />
+          <Text style={styles.cardTitle}>
+            On-Device AI Skill & Difficulty
+          </Text>
+        </View>
+        <Text style={styles.cardSubtitle}>
+          Select your calculus experience level. The local Neuro-Symbolic AI model adapts problem difficulty and targets your weakest topics automatically.
+        </Text>
+
+        {DIFFICULTY_LIST.map((diffKey) => {
+          const cfg = DIFFICULTY_PROFILES[diffKey];
+          const active = progress.selected_difficulty === diffKey;
+          return (
+            <TouchableOpacity
+              key={diffKey}
+              style={[
+                styles.diffOptionCard,
+                active && styles.diffOptionCardActive,
+              ]}
+              onPress={() => handleDifficultyChange(diffKey)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.diffOptionHeader}>
+                <Text
+                  style={[
+                    styles.diffOptionTitle,
+                    active && styles.diffOptionTitleActive,
+                  ]}
+                >
+                  {cfg.label}
+                </Text>
+                {active && (
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={18}
+                    color="#818CF8"
+                  />
+                )}
+              </View>
+              <Text style={styles.diffOptionDesc}>{cfg.description}</Text>
+            </TouchableOpacity>
+          );
+        })}
+
+        {/* Per-Topic Mastery Progress Bars */}
+        <View style={styles.masteryBox}>
+          <View style={styles.masteryHeaderRow}>
+            <Text style={styles.masteryHeaderTitle}>
+              AI TOPIC MASTERY PROFILE
+            </Text>
+            <Text style={styles.masteryEloBadge}>
+              Skill Rating: {progress.skill_rating}
+            </Text>
+          </View>
+
+          {TOPIC_LABELS.map(({ key, label }) => {
+            const pct = Math.round((topicMastery[key] ?? 0.4) * 100);
+            return (
+              <View key={key} style={styles.masteryRow}>
+                <View style={styles.masteryLabelRow}>
+                  <Text style={styles.masteryTopicText}>{label}</Text>
+                  <Text style={styles.masteryPctText}>{pct}%</Text>
+                </View>
+                <View style={styles.masteryTrack}>
+                  <View
+                    style={[
+                      styles.masteryFill,
+                      {
+                        width: `${pct}%`,
+                        backgroundColor:
+                          pct >= 70
+                            ? '#10B981'
+                            : pct >= 45
+                            ? '#6366F1'
+                            : '#F59E0B',
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      </View>
 
       {/* Notification Time Picker Card */}
       <View style={styles.card}>
@@ -219,7 +334,7 @@ export const SettingsScreen: React.FC = () => {
           <Text style={styles.cardTitle}>Data & Progress Management</Text>
         </View>
         <Text style={styles.cardSubtitle}>
-          All progress and history are stored locally in SQLite on your device.
+          All progress, AI mastery weights, and history are stored locally in SQLite on your device.
         </Text>
 
         <TouchableOpacity
@@ -293,7 +408,91 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 13,
     lineHeight: 19,
-    marginBottom: 16,
+    marginBottom: 14,
+  },
+  diffOptionCard: {
+    backgroundColor: '#0F172A',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 8,
+  },
+  diffOptionCardActive: {
+    backgroundColor: 'rgba(99, 102, 241, 0.16)',
+    borderColor: '#6366F1',
+  },
+  diffOptionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 3,
+  },
+  diffOptionTitle: {
+    color: '#E2E8F0',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  diffOptionTitleActive: {
+    color: '#A5B4FC',
+    fontWeight: '800',
+  },
+  diffOptionDesc: {
+    color: '#94A3B8',
+    fontSize: 12,
+  },
+  masteryBox: {
+    marginTop: 10,
+    backgroundColor: '#0F172A',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  masteryHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  masteryHeaderTitle: {
+    color: '#94A3B8',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+  },
+  masteryEloBadge: {
+    color: '#38BDF8',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  masteryRow: {
+    marginBottom: 8,
+  },
+  masteryLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  masteryTopicText: {
+    color: '#CBD5E1',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  masteryPctText: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  masteryTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#1E293B',
+    overflow: 'hidden',
+  },
+  masteryFill: {
+    height: '100%',
+    borderRadius: 3,
   },
   pickerContainer: {
     flexDirection: 'row',

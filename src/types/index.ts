@@ -1,5 +1,17 @@
 export type DrillStatus = 'PENDING' | 'SOLVED' | 'FAILED' | 'SKIPPED';
 
+export type SkillDifficulty = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'MASTER';
+
+export type CalculusTopicKey =
+  | 'polynomial'
+  | 'trig'
+  | 'exponential'
+  | 'logarithmic'
+  | 'product_quotient'
+  | 'chain_by_parts';
+
+export type TopicMasteryMap = Record<CalculusTopicKey, number>;
+
 export type ProblemCategory =
   | 'Power Rule & Polynomials'
   | 'Trig, Exponential & Log'
@@ -18,6 +30,9 @@ export interface UserProgress {
   last_attempt_date: string | null; // YYYY-MM-DD
   notification_hour: number;        // Default 7 (07:00 AM)
   notification_minute: number;      // Default 0
+  selected_difficulty: SkillDifficulty; // User-selected experience tier
+  skill_rating: number;             // Adaptive Elo-style rating (400 - 2400)
+  topic_mastery_json: string;       // JSON string of TopicMasteryMap (0.0 - 1.0 per topic)
 }
 
 /**
@@ -36,21 +51,28 @@ export interface DrillHistory {
   duration_seconds: number | null;  // Time taken in seconds
   category?: string;
   hint?: string;
+  ai_reasoning?: string;            // Why the local AI model selected/generated this problem
+  difficulty?: SkillDifficulty;
+  topic_key?: CalculusTopicKey;
 }
 
 /**
- * Generated calculus challenge
+ * Generated calculus challenge from the Local AI Engine
  */
 export interface CalculusProblem {
   level: number;
   type: ProblemType;
   category: ProblemCategory;
+  topicKey: CalculusTopicKey;
+  difficulty: SkillDifficulty;
+  complexityScore: number;          // 1 - 100
   promptText: string;               // e.g. "Evaluate the indefinite integral" or "Find the derivative"
   problemLatex: string;             // e.g. "\\int 2x \\, dx"
   correctAnswer: string;            // Canonical simplified expression e.g. "x^2 + C"
   correctAnswerLatex: string;       // Display LaTeX e.g. "x^2 + C"
   requiresConstantC: boolean;       // True for indefinite integrals
   hint: string;                     // Step-by-step rule hint
+  aiReasoning: string;              // Personalized explanation of why the AI generated this problem
 }
 
 export interface VerificationResult {
