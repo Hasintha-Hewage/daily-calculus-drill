@@ -87,6 +87,8 @@ export const MathRenderer: React.FC<MathRendererProps> = ({
         <body>
           <div id="math-root">${fallbackText}</div>
           <script>
+            var retries = 0;
+            var maxRetries = 40;
             function renderLatex() {
               if (window.katex) {
                 try {
@@ -95,7 +97,8 @@ export const MathRenderer: React.FC<MathRendererProps> = ({
                     throwOnError: false
                   });
                 } catch (err) {}
-              } else {
+              } else if (retries < maxRetries) {
+                retries += 1;
                 setTimeout(renderLatex, 50);
               }
             }

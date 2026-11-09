@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useDrill } from '../context/DrillContext';
 
 interface HowToPlayModalProps {
   visible: boolean;
@@ -20,6 +21,7 @@ export const HowToPlayModal: React.FC<HowToPlayModalProps> = ({
   initialDoNotShowAgain,
   onClose,
 }) => {
+  const { themeColors } = useDrill();
   const [doNotShowAgain, setDoNotShowAgain] = useState<boolean>(
     initialDoNotShowAgain
   );
@@ -40,23 +42,49 @@ export const HowToPlayModal: React.FC<HowToPlayModalProps> = ({
       onRequestClose={handleClose}
     >
       <View style={styles.backdrop}>
-        <View style={styles.modalCard}>
+        <View
+          style={[
+            styles.modalCard,
+            {
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            },
+          ]}
+        >
           {/* Top Header with Title & Top-Right Close Button */}
           <View style={styles.headerRow}>
             <View style={styles.titleRow}>
               <View style={styles.titleIconBadge}>
-                <Ionicons name="book-outline" size={20} color="#818CF8" />
+                <Ionicons
+                  name="book-outline"
+                  size={20}
+                  color={themeColors.primaryText}
+                />
               </View>
-              <Text style={styles.modalTitle}>How to Play 📐</Text>
+              <Text
+                style={[styles.modalTitle, { color: themeColors.textPrimary }]}
+              >
+                How to Play 📐
+              </Text>
             </View>
 
             <TouchableOpacity
-              style={styles.closeIconButton}
+              style={[
+                styles.closeIconButton,
+                {
+                  backgroundColor: themeColors.innerBox,
+                  borderColor: themeColors.border,
+                },
+              ]}
               onPress={handleClose}
               activeOpacity={0.7}
               accessibilityLabel="Close guide"
             >
-              <Ionicons name="close" size={22} color="#CBD5E1" />
+              <Ionicons
+                name="close"
+                size={22}
+                color={themeColors.textSecondary}
+              />
             </TouchableOpacity>
           </View>
 
@@ -65,12 +93,30 @@ export const HowToPlayModal: React.FC<HowToPlayModalProps> = ({
             showsVerticalScrollIndicator={false}
           >
             {/* Step 1: How the App Works */}
-            <View style={styles.stepCard}>
+            <View
+              style={[
+                styles.stepCard,
+                {
+                  backgroundColor: themeColors.innerBox,
+                  borderColor: themeColors.border,
+                },
+              ]}
+            >
               <View style={styles.stepHeader}>
-                <Ionicons name="calendar-outline" size={19} color="#38BDF8" />
-                <Text style={styles.stepTitle}>1. Daily Calculus Habit</Text>
+                <Ionicons
+                  name="calendar-outline"
+                  size={19}
+                  color={themeColors.accentBlue}
+                />
+                <Text
+                  style={[styles.stepTitle, { color: themeColors.textPrimary }]}
+                >
+                  1. Daily Calculus Habit
+                </Text>
               </View>
-              <Text style={styles.stepText}>
+              <Text
+                style={[styles.stepText, { color: themeColors.textSecondary }]}
+              >
                 Every morning at 07:00 AM (customizable in Settings), you receive
                 a fresh derivative or indefinite integral puzzle. Solve it daily
                 to build your streak!
@@ -78,52 +124,118 @@ export const HowToPlayModal: React.FC<HowToPlayModalProps> = ({
             </View>
 
             {/* Step 2: How to Play & 3-Attempt Rule */}
-            <View style={styles.stepCard}>
+            <View
+              style={[
+                styles.stepCard,
+                {
+                  backgroundColor: themeColors.innerBox,
+                  borderColor: themeColors.border,
+                },
+              ]}
+            >
               <View style={styles.stepHeader}>
                 <Ionicons name="trophy-outline" size={19} color="#FBBF24" />
-                <Text style={styles.stepTitle}>
+                <Text
+                  style={[styles.stepTitle, { color: themeColors.textPrimary }]}
+                >
                   2. How to Play & Level Up
                 </Text>
               </View>
-              <Text style={styles.stepText}>
+              <Text
+                style={[styles.stepText, { color: themeColors.textSecondary }]}
+              >
                 • Type your math answer using the{' '}
-                <Text style={styles.highlight}>Quick-Insert Toolbar</Text> (e.g.,{' '}
-                <Text style={styles.code}>3*x^2</Text> or{' '}
-                <Text style={styles.code}>x^2 + C</Text> for integrals).{'\n'}•
-                You get <Text style={styles.highlight}>3 attempts</Text> per
-                question.{'\n'}• <Text style={styles.successText}>Solving</Text>{' '}
-                advances you to the next <Text style={styles.highlight}>Level (+1)</Text>{' '}
-                and grows your <Text style={styles.highlight}>Streak 🔥</Text>.{'\n'}•{' '}
-                <Text style={styles.dangerText}>Failing 3 attempts</Text> reveals
-                the canonical answer and keeps you at your current level.
+                <Text
+                  style={[styles.highlight, { color: themeColors.textPrimary }]}
+                >
+                  Quick-Insert Toolbar
+                </Text>{' '}
+                (e.g.,{' '}
+                <Text style={[styles.code, { color: themeColors.accentBlue }]}>
+                  3*x^2
+                </Text>{' '}
+                or{' '}
+                <Text style={[styles.code, { color: themeColors.accentBlue }]}>
+                  x^2 + C
+                </Text>{' '}
+                for integrals).{'\n'}• You get{' '}
+                <Text
+                  style={[styles.highlight, { color: themeColors.textPrimary }]}
+                >
+                  3 attempts
+                </Text>{' '}
+                per question.{'\n'}•{' '}
+                <Text style={styles.successText}>Solving</Text> advances you to
+                the next{' '}
+                <Text
+                  style={[styles.highlight, { color: themeColors.textPrimary }]}
+                >
+                  Level (+1)
+                </Text>{' '}
+                and grows your{' '}
+                <Text
+                  style={[styles.highlight, { color: themeColors.textPrimary }]}
+                >
+                  Streak 🔥
+                </Text>
+                .{'\n'}• <Text style={styles.dangerText}>Failing 3 attempts</Text>{' '}
+                reveals the canonical answer and keeps you at your current level.
               </Text>
             </View>
 
             {/* Step 3: Adjust Difficulty & Local AI */}
-            <View style={styles.stepCard}>
+            <View
+              style={[
+                styles.stepCard,
+                {
+                  backgroundColor: themeColors.innerBox,
+                  borderColor: themeColors.border,
+                },
+              ]}
+            >
               <View style={styles.stepHeader}>
-                <Ionicons name="sparkles-outline" size={19} color="#A5B4FC" />
-                <Text style={styles.stepTitle}>
+                <Ionicons
+                  name="sparkles-outline"
+                  size={19}
+                  color={themeColors.primaryText}
+                />
+                <Text
+                  style={[styles.stepTitle, { color: themeColors.textPrimary }]}
+                >
                   3. Adjust Difficulty (Local AI)
                 </Text>
               </View>
-              <Text style={styles.stepText}>
+              <Text
+                style={[styles.stepText, { color: themeColors.textSecondary }]}
+              >
                 • Select your experience level anytime at the top of the screen:{' '}
-                <Text style={styles.highlight}>
+                <Text
+                  style={[styles.highlight, { color: themeColors.textPrimary }]}
+                >
                   Beginner, Intermediate, Advanced, or Master
                 </Text>
                 .{'\n'}• The on-device{' '}
-                <Text style={styles.highlight}>Local AI Model</Text> tracks your
-                Skill Elo and automatically generates questions targeting your
-                weakest topics.{'\n'}• Tap{' '}
-                <Text style={styles.highlight}>&quot;New AI Q&quot;</Text> anytime to
-                practice extra AI-generated problems!
+                <Text
+                  style={[styles.highlight, { color: themeColors.textPrimary }]}
+                >
+                  Local AI Model
+                </Text>{' '}
+                tracks your Skill Elo and automatically generates questions
+                targeting your weakest topics.{'\n'}• Tap{' '}
+                <Text
+                  style={[styles.highlight, { color: themeColors.textPrimary }]}
+                >
+                  &quot;New AI Q&quot;
+                </Text>{' '}
+                anytime to practice extra AI-generated problems!
               </Text>
             </View>
           </ScrollView>
 
           {/* Footer: "Do not show again" checkbox + Confirm Button */}
-          <View style={styles.footer}>
+          <View
+            style={[styles.footer, { borderTopColor: themeColors.border }]}
+          >
             <TouchableOpacity
               style={styles.checkboxRow}
               onPress={() => setDoNotShowAgain((prev) => !prev)}
@@ -132,20 +244,35 @@ export const HowToPlayModal: React.FC<HowToPlayModalProps> = ({
               <View
                 style={[
                   styles.checkboxBox,
-                  doNotShowAgain && styles.checkboxBoxChecked,
+                  {
+                    backgroundColor: themeColors.innerBox,
+                    borderColor: themeColors.textMuted,
+                  },
+                  doNotShowAgain && {
+                    backgroundColor: themeColors.primary,
+                    borderColor: themeColors.primary,
+                  },
                 ]}
               >
                 {doNotShowAgain && (
                   <Ionicons name="checkmark" size={15} color="#FFFFFF" />
                 )}
               </View>
-              <Text style={styles.checkboxLabel}>
+              <Text
+                style={[
+                  styles.checkboxLabel,
+                  { color: themeColors.textSecondary },
+                ]}
+              >
                 Do not show again on startup
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.gotItButton}
+              style={[
+                styles.gotItButton,
+                { backgroundColor: themeColors.primary },
+              ]}
               onPress={handleClose}
               activeOpacity={0.85}
             >

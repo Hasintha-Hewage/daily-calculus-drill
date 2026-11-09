@@ -201,6 +201,23 @@ export async function reconcileDailyRollover(
   todayDate: string = getLocalDateString()
 ): Promise<UserProgress> {
   const db = await getDatabase();
+  const initialProgress = await getUserProgress();
+
+  // If the user already solved their daily drill on last_attempt_date (streak > 0)
+  // and later tapped "New AI Q" for extra practice leaving that row PENDING,
+  // restore that row to SOLVED before expiring unfinished prior days.
+  if (
+    initialProgress.last_attempt_date &&
+    initialProgress.last_attempt_date < todayDate &&
+    initialProgress.streak > 0
+  ) {
+    await db.runAsync(
+      `UPDATE drill_history
+       SET status = 'SOLVED'
+       WHERE date = ? AND status = 'PENDING';`,
+      [initialProgress.last_attempt_date]
+    );
+  }
 
   await db.runAsync(
     `UPDATE drill_history
@@ -445,6 +462,9 @@ export async function recordDrillAttempt(params: {
     : baseAttempts + 1;
 
   const nowIso = new Date().toISOString();
+  const alreadySolvedToday =
+    progressBefore.last_attempt_date === params.date &&
+    progressBefore.streak > 0;
 
   if (params.isCorrect) {
     const { nextRating, nextMastery } = updateSkillModelAfterAttempt({
@@ -473,15 +493,19 @@ export async function recordDrillAttempt(params: {
       ]
     );
 
+    const nextStreak = alreadySolvedToday
+      ? progressBefore.streak
+      : progressBefore.streak + 1;
+
     await db.runAsync(
       `UPDATE user_progress
        SET current_level = current_level + 1,
-           streak = streak + 1,
+           streak = ?,
            last_attempt_date = ?,
            skill_rating = ?,
            topic_mastery_json = ?
        WHERE id = 1;`,
-      [params.date, nextRating, JSON.stringify(nextMastery)]
+      [nextStreak, params.date, nextRating, JSON.stringify(nextMastery)]
     );
   } else if (params.giveUp || nextAttempts >= 3) {
     const finalStatus: DrillStatus = 'FAILED';
@@ -512,14 +536,18 @@ export async function recordDrillAttempt(params: {
       ]
     );
 
+    // If the user already solved today's daily drill, failing an extra bonus question
+    // adjusts their AI Skill Rating without wiping the daily streak they already earned today.
+    const nextStreakOnFail = alreadySolvedToday ? progressBefore.streak : 0;
+
     await db.runAsync(
       `UPDATE user_progress
-       SET streak = 0,
+       SET streak = ?,
            last_attempt_date = ?,
            skill_rating = ?,
            topic_mastery_json = ?
        WHERE id = 1;`,
-      [params.date, nextRating, JSON.stringify(nextMastery)]
+      [nextStreakOnFail, params.date, nextRating, JSON.stringify(nextMastery)]
     );
   } else {
     // Attempts 1 or 2 wrong: keep status = 'PENDING' and increment attempts_used

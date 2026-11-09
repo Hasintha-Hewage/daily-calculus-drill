@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   ScrollView,
@@ -60,6 +60,11 @@ export const SettingsScreen: React.FC = () => {
     progress.notification_minute ?? 0
   );
   const [statusBanner, setStatusBanner] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSelectedHour(progress.notification_hour ?? 7);
+    setSelectedMinute(progress.notification_minute ?? 0);
+  }, [progress.notification_hour, progress.notification_minute]);
 
   const adjustHour = (delta: number) => {
     setSelectedHour((prev) => (prev + delta + 24) % 24);
@@ -670,6 +675,59 @@ export const SettingsScreen: React.FC = () => {
           <Text style={styles.dangerBtnText}>Reset All Progress to Level 1</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Developer Branding & Attribution Card */}
+      <View
+        style={[
+          styles.card,
+          styles.brandingCard,
+          { backgroundColor: themeColors.card, borderColor: themeColors.border },
+        ]}
+      >
+        <View style={styles.brandBadgeRow}>
+          <View
+            style={[
+              styles.brandEmblem,
+              {
+                backgroundColor: themeColors.innerBox,
+                borderColor: themeColors.primary,
+              },
+            ]}
+          >
+            <Text style={[styles.brandIntegralText, { color: themeColors.primaryText }]}>
+              ∫
+            </Text>
+          </View>
+          <View style={styles.brandTextCol}>
+            <Text style={[styles.brandAppTitle, { color: themeColors.textPrimary }]}>
+              Daily Calculus Drill
+            </Text>
+            <Text style={[styles.brandVersionText, { color: themeColors.textMuted }]}>
+              Version 1.0.0 · 100% On-Device Neuro-Symbolic AI
+            </Text>
+          </View>
+        </View>
+
+        <View
+          style={[
+            styles.developerBox,
+            {
+              backgroundColor: themeColors.innerBox,
+              borderColor: themeColors.border,
+            },
+          ]}
+        >
+          <Text style={[styles.developerRoleLabel, { color: themeColors.textMuted }]}>
+            DESIGNED & ENGINEERED BY
+          </Text>
+          <Text style={[styles.developerName, { color: themeColors.textPrimary }]}>
+            Hasintha Hewage
+          </Text>
+          <Text style={[styles.developerTagline, { color: themeColors.accentBlue }]}>
+            Independent Developer
+          </Text>
+        </View>
+      </View>
     </ScrollView>
   );
 };
@@ -944,5 +1002,61 @@ const styles = StyleSheet.create({
     color: '#EF4444',
     fontSize: 14,
     fontWeight: '700',
+  },
+  brandingCard: {
+    marginBottom: 8,
+  },
+  brandBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginBottom: 14,
+  },
+  brandEmblem: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brandIntegralText: {
+    fontSize: 26,
+    fontWeight: '800',
+  },
+  brandTextCol: {
+    flex: 1,
+  },
+  brandAppTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  brandVersionText: {
+    fontSize: 12,
+    marginTop: 2,
+    fontWeight: '600',
+  },
+  developerBox: {
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  developerRoleLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  developerName: {
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  developerTagline: {
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 2,
   },
 });

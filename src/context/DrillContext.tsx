@@ -41,7 +41,10 @@ import {
   UserProgress,
   VerificationResult,
 } from '../types';
-import { verifyCalculusAnswer } from '../utils/mathVerifier';
+import {
+  userInputToLatex,
+  verifyCalculusAnswer,
+} from '../utils/mathVerifier';
 import { generateDailyProblem } from '../utils/problemGenerator';
 
 interface SubmitOutcome {
@@ -112,7 +115,10 @@ function buildProblemFromDrillRow(
       : 'Find the derivative with respect to x:',
     problemLatex: row.problem_latex,
     correctAnswer: row.correct_answer,
-    correctAnswerLatex: row.correct_answer.replace(/\*/g, ''),
+    correctAnswerLatex:
+      row.correct_answer === fallbackProblem.correctAnswer
+        ? fallbackProblem.correctAnswerLatex
+        : userInputToLatex(row.correct_answer),
     requiresConstantC: isIntegral,
     hint: row.hint || fallbackProblem.hint,
     aiReasoning: row.ai_reasoning || fallbackProblem.aiReasoning,

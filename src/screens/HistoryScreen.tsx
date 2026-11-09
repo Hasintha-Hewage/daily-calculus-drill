@@ -197,6 +197,10 @@ export const HistoryScreen: React.FC = () => {
         data={history}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.listContent}
+        initialNumToRender={6}
+        maxToRenderPerBatch={4}
+        windowSize={5}
+        removeClippedSubviews={true}
         ListHeaderComponent={
           <View>
             {/* Top Summary Metrics */}
