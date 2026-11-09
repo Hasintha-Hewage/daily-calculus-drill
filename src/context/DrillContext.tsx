@@ -21,6 +21,7 @@ import {
   replaceDailyDrillWithAIProblem,
   resetAllProgress,
   updateNotificationTime,
+  updateOnboardingPreference,
   updateSelectedDifficulty,
 } from '../database/db';
 import {
@@ -54,8 +55,12 @@ interface DrillContextValue {
   todayProblem: CalculusProblem | null;
   history: DrillHistory[];
   elapsedSeconds: number;
+  isHelpModalVisible: boolean;
+  openHelpModal: () => void;
+  closeHelpModal: (doNotShowAgain: boolean) => Promise<void>;
   submitAnswer: (rawInput: string) => Promise<SubmitOutcome>;
   giveUpToday: () => Promise<void>;
+  retryCurrentProblem: () => Promise<void>;
   changeDifficulty: (difficulty: SkillDifficulty) => Promise<void>;
   generateNewAIProblem: () => Promise<void>;
   updateReminderSchedule: (hour: number, minute: number) => Promise<void>;
@@ -74,6 +79,7 @@ const DEFAULT_PROGRESS: UserProgress = {
   selected_difficulty: 'BEGINNER',
   skill_rating: 800,
   topic_mastery_json: JSON.stringify(DEFAULT_TOPIC_MASTERY),
+  hide_onboarding_modal: 0,
 };
 
 const DrillContext = createContext<DrillContextValue | undefined>(undefined);
@@ -115,9 +121,11 @@ export const DrillProvider: React.FC<{ children: React.ReactNode }> = ({
   const [todayProblem, setTodayProblem] = useState<CalculusProblem | null>(null);
   const [history, setHistory] = useState<DrillHistory[]>([]);
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
+  const [isHelpModalVisible, setIsHelpModalVisible] = useState<boolean>(false);
 
   const sessionStartRef = useRef<number>(Date.now());
   const loadedDateRef = useRef<string | null>(null);
+  const hasShownInitialHelpRef = useRef<boolean>(false);
 
   const loadAndSyncDailyState = useCallback(async () => {
     try {
@@ -128,6 +136,14 @@ export const DrillProvider: React.FC<{ children: React.ReactNode }> = ({
       // 1. Reconcile any missed days or expired pending drills
       const currentProgress = await reconcileDailyRollover(todayDate);
       setProgress(currentProgress);
+
+      if (
+        !hasShownInitialHelpRef.current &&
+        Number(currentProgress.hide_onboarding_modal ?? 0) === 0
+      ) {
+        hasShownInitialHelpRef.current = true;
+        setIsHelpModalVisible(true);
+      }
 
       const allHistory = await getAllDrillHistory();
       const mastery = parseTopicMastery(currentProgress.topic_mastery_json);
@@ -152,7 +168,7 @@ export const DrillProvider: React.FC<{ children: React.ReactNode }> = ({
 
       const activeProblem = buildProblemFromDrillRow(drillRow, aiProblem);
 
-      setTodayDrill(drillRow);
+      setTodayDrill({ ...drillRow });
       setTodayProblem(activeProblem);
       setElapsedSeconds(drillRow.duration_seconds ?? 0);
       sessionStartRef.current = Date.now();
@@ -212,7 +228,7 @@ export const DrillProvider: React.FC<{ children: React.ReactNode }> = ({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [todayDrill]);
+  }, [todayDrill?.status, todayDrill?.date]);
 
   const submitAnswer = useCallback(
     async (rawInput: string): Promise<SubmitOutcome> => {
@@ -220,50 +236,83 @@ export const DrillProvider: React.FC<{ children: React.ReactNode }> = ({
         throw new Error('Daily drill is not loaded yet.');
       }
 
+      const currentUsed = Number(todayDrill.attempts_used ?? 0);
+
+      // Only empty input is ignored
+      if (!rawInput.trim()) {
+        return {
+          verification: {
+            isCorrect: false,
+            normalizedUserAnswer: '',
+            errorMessage: 'Please enter an expression before submitting.',
+          },
+          statusAfterAttempt: todayDrill.status,
+          attemptsRemaining: Math.max(0, 3 - currentUsed),
+        };
+      }
+
       const verification = verifyCalculusAnswer(
         rawInput,
         todayProblem.correctAnswer
       );
 
-      // Empty or syntax-invalid input does not consume one of the 3 attempts
-      if (
-        !rawInput.trim() ||
-        verification.errorMessage?.startsWith('Invalid syntax')
-      ) {
+      // Compute deterministic next attempt count (1 -> 2 -> 3)
+      const nextAttempts = currentUsed + 1;
+      const nextStatus: DrillHistory['status'] = verification.isCorrect
+        ? 'SOLVED'
+        : nextAttempts >= 3
+        ? 'FAILED'
+        : 'PENDING';
+
+      // Immediately update UI state so the attempt counter & dots always respond
+      const optimisticDrill: DrillHistory = {
+        ...todayDrill,
+        user_answer: rawInput.trim(),
+        attempts_used: nextAttempts,
+        status: nextStatus,
+        duration_seconds: Math.max(1, elapsedSeconds),
+      };
+      setTodayDrill(optimisticDrill);
+
+      try {
+        const { updatedDrill, updatedProgress } = await recordDrillAttempt({
+          date: todayDrill.date,
+          userAnswer: rawInput.trim(),
+          isCorrect: verification.isCorrect,
+          durationSeconds: Math.max(1, elapsedSeconds),
+          currentAttemptsUsed: currentUsed,
+        });
+
+        setTodayDrill({ ...updatedDrill });
+        setProgress({ ...updatedProgress });
+
+        const allHistory = await getAllDrillHistory();
+        setHistory(allHistory);
+
+        if (verification.isCorrect) {
+          await scheduleDailyDrillNotification({
+            currentLevel: updatedProgress.current_level,
+            hour: updatedProgress.notification_hour,
+            minute: updatedProgress.notification_minute,
+          });
+        }
+
         return {
           verification,
-          statusAfterAttempt: todayDrill.status,
-          attemptsRemaining: Math.max(0, 3 - todayDrill.attempts_used),
+          statusAfterAttempt: updatedDrill.status,
+          attemptsRemaining: Math.max(
+            0,
+            3 - Number(updatedDrill.attempts_used ?? nextAttempts)
+          ),
+        };
+      } catch (err) {
+        console.warn('DB attempt update fallback:', err);
+        return {
+          verification,
+          statusAfterAttempt: nextStatus,
+          attemptsRemaining: Math.max(0, 3 - nextAttempts),
         };
       }
-
-      const { updatedDrill, updatedProgress } = await recordDrillAttempt({
-        date: todayDrill.date,
-        userAnswer: rawInput.trim(),
-        isCorrect: verification.isCorrect,
-        durationSeconds: Math.max(1, elapsedSeconds),
-      });
-
-      setTodayDrill(updatedDrill);
-      setProgress(updatedProgress);
-
-      const allHistory = await getAllDrillHistory();
-      setHistory(allHistory);
-
-      // If level increased on solve, update the scheduled notification text for tomorrow
-      if (verification.isCorrect) {
-        await scheduleDailyDrillNotification({
-          currentLevel: updatedProgress.current_level,
-          hour: updatedProgress.notification_hour,
-          minute: updatedProgress.notification_minute,
-        });
-      }
-
-      return {
-        verification,
-        statusAfterAttempt: updatedDrill.status,
-        attemptsRemaining: Math.max(0, 3 - updatedDrill.attempts_used),
-      };
     },
     [todayDrill, todayProblem, elapsedSeconds]
   );
@@ -271,54 +320,107 @@ export const DrillProvider: React.FC<{ children: React.ReactNode }> = ({
   const giveUpToday = useCallback(async (): Promise<void> => {
     if (!todayDrill) return;
 
-    const { updatedDrill, updatedProgress } = await recordDrillAttempt({
-      date: todayDrill.date,
-      userAnswer: todayDrill.user_answer || 'GAVE UP',
-      isCorrect: false,
-      giveUp: true,
-      durationSeconds: Math.max(1, elapsedSeconds),
+    const currentUsed = Number(todayDrill.attempts_used ?? 0);
+    setTodayDrill({
+      ...todayDrill,
+      user_answer: todayDrill.user_answer || 'GAVE UP',
+      attempts_used: Math.max(currentUsed, 3),
+      status: 'FAILED',
     });
 
-    setTodayDrill(updatedDrill);
-    setProgress(updatedProgress);
-
-    const allHistory = await getAllDrillHistory();
-    setHistory(allHistory);
-  }, [todayDrill, elapsedSeconds]);
-
-  const changeDifficulty = useCallback(
-    async (difficulty: SkillDifficulty): Promise<void> => {
-      const updatedProgress = await updateSelectedDifficulty(difficulty);
-      setProgress(updatedProgress);
-
-      const todayDate = getLocalDateString();
-      const mastery = parseTopicMastery(updatedProgress.topic_mastery_json);
-
-      // Synthesize a new personalized problem matching the user's newly selected experience tier
-      const newAIProblem = generateDailyProblem(
-        updatedProgress.current_level,
-        todayDate,
-        {
-          difficulty,
-          skillRating: updatedProgress.skill_rating,
-          mastery,
-          recentHistory: history,
-          customSeed: `${todayDate}-${difficulty}-${Date.now()}`,
-        }
-      );
-
-      const updatedDrill = await replaceDailyDrillWithAIProblem({
-        date: todayDate,
-        problem: newAIProblem,
+    try {
+      const { updatedDrill, updatedProgress } = await recordDrillAttempt({
+        date: todayDrill.date,
+        userAnswer: todayDrill.user_answer || 'GAVE UP',
+        isCorrect: false,
+        giveUp: true,
+        durationSeconds: Math.max(1, elapsedSeconds),
+        currentAttemptsUsed: currentUsed,
       });
 
-      setTodayDrill(updatedDrill);
-      setTodayProblem(newAIProblem);
-      setElapsedSeconds(0);
-      sessionStartRef.current = Date.now();
+      setTodayDrill({ ...updatedDrill });
+      setProgress({ ...updatedProgress });
 
       const allHistory = await getAllDrillHistory();
       setHistory(allHistory);
+    } catch (err) {
+      console.warn('Give up DB fallback:', err);
+    }
+  }, [todayDrill, elapsedSeconds]);
+
+  const retryCurrentProblem = useCallback(async (): Promise<void> => {
+    if (!todayProblem) return;
+    const todayDate = getLocalDateString();
+
+    const resetRow: DrillHistory = {
+      id: todayDrill?.id ?? 1,
+      date: todayDate,
+      level: todayProblem.level,
+      problem_latex: todayProblem.problemLatex,
+      correct_answer: todayProblem.correctAnswer,
+      user_answer: '',
+      status: 'PENDING',
+      solved_at: null,
+      attempts_used: 0,
+      duration_seconds: 0,
+      category: todayProblem.category,
+      hint: todayProblem.hint,
+      ai_reasoning: todayProblem.aiReasoning,
+      difficulty: todayProblem.difficulty,
+      topic_key: todayProblem.topicKey,
+    };
+    setTodayDrill(resetRow);
+    setElapsedSeconds(0);
+    sessionStartRef.current = Date.now();
+
+    try {
+      const updatedDrill = await replaceDailyDrillWithAIProblem({
+        date: todayDate,
+        problem: todayProblem,
+      });
+      setTodayDrill({ ...updatedDrill });
+      const allHistory = await getAllDrillHistory();
+      setHistory(allHistory);
+    } catch (err) {
+      console.warn('Retry problem DB fallback:', err);
+    }
+  }, [todayDrill, todayProblem]);
+
+  const changeDifficulty = useCallback(
+    async (difficulty: SkillDifficulty): Promise<void> => {
+      const todayDate = getLocalDateString();
+      try {
+        const updatedProgress = await updateSelectedDifficulty(difficulty);
+        setProgress({ ...updatedProgress });
+
+        const mastery = parseTopicMastery(updatedProgress.topic_mastery_json);
+        const newAIProblem = generateDailyProblem(
+          updatedProgress.current_level,
+          todayDate,
+          {
+            difficulty,
+            skillRating: updatedProgress.skill_rating,
+            mastery,
+            recentHistory: history,
+            customSeed: `${todayDate}-${difficulty}-${Date.now()}`,
+          }
+        );
+
+        setTodayProblem(newAIProblem);
+        const updatedDrill = await replaceDailyDrillWithAIProblem({
+          date: todayDate,
+          problem: newAIProblem,
+        });
+
+        setTodayDrill({ ...updatedDrill });
+        setElapsedSeconds(0);
+        sessionStartRef.current = Date.now();
+
+        const allHistory = await getAllDrillHistory();
+        setHistory(allHistory);
+      } catch (err) {
+        console.warn('Change difficulty fallback:', err);
+      }
     },
     [history]
   );
@@ -339,24 +441,43 @@ export const DrillProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     );
 
-    const updatedDrill = await replaceDailyDrillWithAIProblem({
-      date: todayDate,
-      problem: newAIProblem,
-    });
-
-    setTodayDrill(updatedDrill);
     setTodayProblem(newAIProblem);
     setElapsedSeconds(0);
     sessionStartRef.current = Date.now();
 
-    const allHistory = await getAllDrillHistory();
-    setHistory(allHistory);
-  }, [progress, history]);
+    try {
+      const updatedDrill = await replaceDailyDrillWithAIProblem({
+        date: todayDate,
+        problem: newAIProblem,
+      });
+      setTodayDrill({ ...updatedDrill });
+      const allHistory = await getAllDrillHistory();
+      setHistory(allHistory);
+    } catch (err) {
+      setTodayDrill({
+        id: todayDrill?.id ?? 1,
+        date: todayDate,
+        level: newAIProblem.level,
+        problem_latex: newAIProblem.problemLatex,
+        correct_answer: newAIProblem.correctAnswer,
+        user_answer: '',
+        status: 'PENDING',
+        solved_at: null,
+        attempts_used: 0,
+        duration_seconds: 0,
+        category: newAIProblem.category,
+        hint: newAIProblem.hint,
+        ai_reasoning: newAIProblem.aiReasoning,
+        difficulty: newAIProblem.difficulty,
+        topic_key: newAIProblem.topicKey,
+      });
+    }
+  }, [progress, history, todayDrill]);
 
   const updateReminderSchedule = useCallback(
     async (hour: number, minute: number): Promise<void> => {
       const updated = await updateNotificationTime(hour, minute);
-      setProgress(updated);
+      setProgress({ ...updated });
       await scheduleDailyDrillNotification({
         currentLevel: updated.current_level,
         hour: updated.notification_hour,
@@ -369,6 +490,27 @@ export const DrillProvider: React.FC<{ children: React.ReactNode }> = ({
   const exportBackupJson = useCallback(async (): Promise<string> => {
     return await exportDatabaseBackup();
   }, []);
+
+  const openHelpModal = useCallback(() => {
+    setIsHelpModalVisible(true);
+  }, []);
+
+  const closeHelpModal = useCallback(
+    async (doNotShowAgain: boolean): Promise<void> => {
+      setIsHelpModalVisible(false);
+      setProgress((prev) => ({
+        ...prev,
+        hide_onboarding_modal: doNotShowAgain ? 1 : 0,
+      }));
+      try {
+        const updated = await updateOnboardingPreference(doNotShowAgain);
+        setProgress({ ...updated });
+      } catch (err) {
+        console.warn('Could not save onboarding preference:', err);
+      }
+    },
+    []
+  );
 
   const resetProgressData = useCallback(async (): Promise<void> => {
     await resetAllProgress();
@@ -387,8 +529,12 @@ export const DrillProvider: React.FC<{ children: React.ReactNode }> = ({
         todayProblem,
         history,
         elapsedSeconds,
+        isHelpModalVisible,
+        openHelpModal,
+        closeHelpModal,
         submitAnswer,
         giveUpToday,
+        retryCurrentProblem,
         changeDifficulty,
         generateNewAIProblem,
         updateReminderSchedule,

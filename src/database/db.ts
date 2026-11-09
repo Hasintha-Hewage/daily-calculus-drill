@@ -15,8 +15,10 @@ import {
 } from '../types';
 
 const DATABASE_NAME = 'daily_calculus_drill.db';
+const SCHEMA_VERSION = 4;
 
 let dbInstance: SQLite.SQLiteDatabase | null = null;
+let appliedSchemaVersion = 0;
 
 /**
  * Returns today's local date in ISO YYYY-MM-DD format.
@@ -53,87 +55,95 @@ async function safeAddColumn(
 
 /**
  * Opens and initializes the SQLite database with required schema migrations.
+ * Ensures migrations execute even across Expo Fast Refresh cycles.
  */
 export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
-  if (dbInstance) {
-    return dbInstance;
+  if (!dbInstance) {
+    dbInstance = await SQLite.openDatabaseAsync(DATABASE_NAME);
   }
 
-  const db = await SQLite.openDatabaseAsync(DATABASE_NAME);
+  if (appliedSchemaVersion < SCHEMA_VERSION) {
+    const db = dbInstance;
+    const defaultMasteryJson = JSON.stringify(DEFAULT_TOPIC_MASTERY);
 
-  const defaultMasteryJson = JSON.stringify(DEFAULT_TOPIC_MASTERY);
+    await db.execAsync(`
+      PRAGMA journal_mode = WAL;
 
-  await db.execAsync(`
-    PRAGMA journal_mode = WAL;
+      CREATE TABLE IF NOT EXISTS user_progress (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        current_level INTEGER NOT NULL DEFAULT 1,
+        streak INTEGER NOT NULL DEFAULT 0,
+        last_attempt_date TEXT,
+        notification_hour INTEGER NOT NULL DEFAULT 7,
+        notification_minute INTEGER NOT NULL DEFAULT 0,
+        selected_difficulty TEXT NOT NULL DEFAULT 'BEGINNER',
+        skill_rating INTEGER NOT NULL DEFAULT 800,
+        topic_mastery_json TEXT NOT NULL DEFAULT '${defaultMasteryJson}',
+        hide_onboarding_modal INTEGER NOT NULL DEFAULT 0
+      );
 
-    CREATE TABLE IF NOT EXISTS user_progress (
-      id INTEGER PRIMARY KEY CHECK (id = 1),
-      current_level INTEGER NOT NULL DEFAULT 1,
-      streak INTEGER NOT NULL DEFAULT 0,
-      last_attempt_date TEXT,
-      notification_hour INTEGER NOT NULL DEFAULT 7,
-      notification_minute INTEGER NOT NULL DEFAULT 0,
-      selected_difficulty TEXT NOT NULL DEFAULT 'BEGINNER',
-      skill_rating INTEGER NOT NULL DEFAULT 800,
-      topic_mastery_json TEXT NOT NULL DEFAULT '${defaultMasteryJson}'
+      CREATE TABLE IF NOT EXISTS drill_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL UNIQUE,
+        level INTEGER NOT NULL,
+        problem_latex TEXT NOT NULL,
+        correct_answer TEXT NOT NULL,
+        user_answer TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL CHECK (status IN ('PENDING', 'SOLVED', 'FAILED', 'SKIPPED')),
+        solved_at TEXT,
+        attempts_used INTEGER NOT NULL DEFAULT 0,
+        duration_seconds INTEGER,
+        category TEXT,
+        hint TEXT,
+        ai_reasoning TEXT,
+        difficulty TEXT,
+        topic_key TEXT
+      );
+    `);
+
+    await safeAddColumn(
+      db,
+      'user_progress',
+      "selected_difficulty TEXT NOT NULL DEFAULT 'BEGINNER'"
+    );
+    await safeAddColumn(
+      db,
+      'user_progress',
+      'skill_rating INTEGER NOT NULL DEFAULT 800'
+    );
+    await safeAddColumn(
+      db,
+      'user_progress',
+      `topic_mastery_json TEXT NOT NULL DEFAULT '${defaultMasteryJson}'`
+    );
+    await safeAddColumn(
+      db,
+      'user_progress',
+      'hide_onboarding_modal INTEGER NOT NULL DEFAULT 0'
+    );
+    await safeAddColumn(db, 'drill_history', 'ai_reasoning TEXT');
+    await safeAddColumn(db, 'drill_history', 'difficulty TEXT');
+    await safeAddColumn(db, 'drill_history', 'topic_key TEXT');
+
+    await db.runAsync(
+      `INSERT OR IGNORE INTO user_progress (
+        id,
+        current_level,
+        streak,
+        last_attempt_date,
+        notification_hour,
+        notification_minute,
+        selected_difficulty,
+        skill_rating,
+        topic_mastery_json
+      ) VALUES (1, 1, 0, NULL, 7, 0, 'BEGINNER', 800, ?);`,
+      [defaultMasteryJson]
     );
 
-    CREATE TABLE IF NOT EXISTS drill_history (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      date TEXT NOT NULL UNIQUE,
-      level INTEGER NOT NULL,
-      problem_latex TEXT NOT NULL,
-      correct_answer TEXT NOT NULL,
-      user_answer TEXT NOT NULL DEFAULT '',
-      status TEXT NOT NULL CHECK (status IN ('PENDING', 'SOLVED', 'FAILED', 'SKIPPED')),
-      solved_at TEXT,
-      attempts_used INTEGER NOT NULL DEFAULT 0,
-      duration_seconds INTEGER,
-      category TEXT,
-      hint TEXT,
-      ai_reasoning TEXT,
-      difficulty TEXT,
-      topic_key TEXT
-    );
-  `);
+    appliedSchemaVersion = SCHEMA_VERSION;
+  }
 
-  // Safe migrations for existing installations
-  await safeAddColumn(
-    db,
-    'user_progress',
-    "selected_difficulty TEXT NOT NULL DEFAULT 'BEGINNER'"
-  );
-  await safeAddColumn(
-    db,
-    'user_progress',
-    'skill_rating INTEGER NOT NULL DEFAULT 800'
-  );
-  await safeAddColumn(
-    db,
-    'user_progress',
-    `topic_mastery_json TEXT NOT NULL DEFAULT '${defaultMasteryJson}'`
-  );
-  await safeAddColumn(db, 'drill_history', 'ai_reasoning TEXT');
-  await safeAddColumn(db, 'drill_history', 'difficulty TEXT');
-  await safeAddColumn(db, 'drill_history', 'topic_key TEXT');
-
-  await db.runAsync(
-    `INSERT OR IGNORE INTO user_progress (
-      id,
-      current_level,
-      streak,
-      last_attempt_date,
-      notification_hour,
-      notification_minute,
-      selected_difficulty,
-      skill_rating,
-      topic_mastery_json
-    ) VALUES (1, 1, 0, NULL, 7, 0, 'BEGINNER', 800, ?);`,
-    [defaultMasteryJson]
-  );
-
-  dbInstance = db;
-  return db;
+  return dbInstance;
 }
 
 /**
@@ -156,22 +166,27 @@ export async function getUserProgress(): Promise<UserProgress> {
       selected_difficulty: 'BEGINNER',
       skill_rating: 800,
       topic_mastery_json: JSON.stringify(DEFAULT_TOPIC_MASTERY),
+      hide_onboarding_modal: 0,
     };
   }
 
   return {
     ...row,
-    selected_difficulty: (row.selected_difficulty as SkillDifficulty) || 'BEGINNER',
-    skill_rating: row.skill_rating ?? 800,
+    current_level: Number(row.current_level ?? 1),
+    streak: Number(row.streak ?? 0),
+    notification_hour: Number(row.notification_hour ?? 7),
+    notification_minute: Number(row.notification_minute ?? 0),
+    selected_difficulty:
+      (row.selected_difficulty as SkillDifficulty) || 'BEGINNER',
+    skill_rating: Number(row.skill_rating ?? 800),
     topic_mastery_json:
       row.topic_mastery_json || JSON.stringify(DEFAULT_TOPIC_MASTERY),
+    hide_onboarding_modal: Number(row.hide_onboarding_modal ?? 0),
   };
 }
 
 /**
- * Evaluates day rollover rules on app startup or foreground:
- * 1. Any past record still in 'PENDING' state is marked 'FAILED' (expired without solve).
- * 2. If the user missed yesterday (or failed yesterday), streak resets to 0 while current_level stays unchanged.
+ * Evaluates day rollover rules on app startup or foreground.
  */
 export async function reconcileDailyRollover(
   todayDate: string = getLocalDateString()
@@ -215,7 +230,12 @@ export async function getDrillByDate(date: string): Promise<DrillHistory | null>
     'SELECT * FROM drill_history WHERE date = ?;',
     [date]
   );
-  return row ?? null;
+  if (!row) return null;
+  return {
+    ...row,
+    attempts_used: Number(row.attempts_used ?? 0),
+    duration_seconds: Number(row.duration_seconds ?? 0),
+  };
 }
 
 /**
@@ -272,7 +292,7 @@ export async function getOrCreateDailyDrill(params: {
 
 /**
  * Replaces today's active drill with a newly synthesized AI problem
- * (used when the user switches difficulty tier or requests a new AI problem).
+ * and resets attempts_used = 0 and status = 'PENDING'.
  */
 export async function replaceDailyDrillWithAIProblem(params: {
   date: string;
@@ -281,49 +301,67 @@ export async function replaceDailyDrillWithAIProblem(params: {
   const db = await getDatabase();
   const { problem } = params;
 
-  await db.runAsync(
-    `INSERT INTO drill_history (
-      date,
-      level,
-      problem_latex,
-      correct_answer,
-      user_answer,
-      status,
-      solved_at,
-      attempts_used,
-      duration_seconds,
-      category,
-      hint,
-      ai_reasoning,
-      difficulty,
-      topic_key
-    ) VALUES (?, ?, ?, ?, '', 'PENDING', NULL, 0, 0, ?, ?, ?, ?, ?)
-    ON CONFLICT(date) DO UPDATE SET
-      level = excluded.level,
-      problem_latex = excluded.problem_latex,
-      correct_answer = excluded.correct_answer,
-      user_answer = '',
-      status = 'PENDING',
-      solved_at = NULL,
-      attempts_used = 0,
-      duration_seconds = 0,
-      category = excluded.category,
-      hint = excluded.hint,
-      ai_reasoning = excluded.ai_reasoning,
-      difficulty = excluded.difficulty,
-      topic_key = excluded.topic_key;`,
-    [
-      params.date,
-      problem.level,
-      problem.problemLatex,
-      problem.correctAnswer,
-      problem.category,
-      problem.hint,
-      problem.aiReasoning,
-      problem.difficulty,
-      problem.topicKey,
-    ]
-  );
+  const existing = await getDrillByDate(params.date);
+  if (existing) {
+    await db.runAsync(
+      `UPDATE drill_history
+       SET level = ?,
+           problem_latex = ?,
+           correct_answer = ?,
+           user_answer = '',
+           status = 'PENDING',
+           solved_at = NULL,
+           attempts_used = 0,
+           duration_seconds = 0,
+           category = ?,
+           hint = ?,
+           ai_reasoning = ?,
+           difficulty = ?,
+           topic_key = ?
+       WHERE date = ?;`,
+      [
+        problem.level,
+        problem.problemLatex,
+        problem.correctAnswer,
+        problem.category,
+        problem.hint,
+        problem.aiReasoning,
+        problem.difficulty,
+        problem.topicKey,
+        params.date,
+      ]
+    );
+  } else {
+    await db.runAsync(
+      `INSERT INTO drill_history (
+        date,
+        level,
+        problem_latex,
+        correct_answer,
+        user_answer,
+        status,
+        solved_at,
+        attempts_used,
+        duration_seconds,
+        category,
+        hint,
+        ai_reasoning,
+        difficulty,
+        topic_key
+      ) VALUES (?, ?, ?, ?, '', 'PENDING', NULL, 0, 0, ?, ?, ?, ?, ?);`,
+      [
+        params.date,
+        problem.level,
+        problem.problemLatex,
+        problem.correctAnswer,
+        problem.category,
+        problem.hint,
+        problem.aiReasoning,
+        problem.difficulty,
+        problem.topicKey,
+      ]
+    );
+  }
 
   const updated = await getDrillByDate(params.date);
   if (!updated) {
@@ -342,7 +380,6 @@ export async function updateSelectedDifficulty(
   const progress = await getUserProgress();
   const profile = DIFFICULTY_PROFILES[difficulty];
 
-  // Blend current rating toward the selected difficulty tier's target rating
   const updatedRating = Math.round(
     progress.skill_rating * 0.35 + profile.baseRating * 0.65
   );
@@ -360,6 +397,9 @@ export async function updateSelectedDifficulty(
 
 /**
  * Records a user attempt and updates the Local AI Skill & Mastery model.
+ * - Attempt 1 wrong -> attempts_used = 1, status = 'PENDING' (2 attempts left)
+ * - Attempt 2 wrong -> attempts_used = 2, status = 'PENDING' (1 attempt left)
+ * - Attempt 3 wrong (or Give Up) -> attempts_used = 3, status = 'FAILED' (0 attempts left)
  */
 export async function recordDrillAttempt(params: {
   date: string;
@@ -367,6 +407,7 @@ export async function recordDrillAttempt(params: {
   isCorrect: boolean;
   giveUp?: boolean;
   durationSeconds: number;
+  currentAttemptsUsed?: number;
 }): Promise<{ updatedDrill: DrillHistory; updatedProgress: UserProgress }> {
   const db = await getDatabase();
   const currentDrill = await getDrillByDate(params.date);
@@ -385,14 +426,18 @@ export async function recordDrillAttempt(params: {
   const topicKey: CalculusTopicKey =
     (currentDrill.topic_key as CalculusTopicKey) || 'polynomial';
 
+  const baseAttempts =
+    params.currentAttemptsUsed !== undefined
+      ? params.currentAttemptsUsed
+      : Number(currentDrill.attempts_used ?? 0);
+
   const nextAttempts = params.giveUp
-    ? Math.max(currentDrill.attempts_used, 3)
-    : currentDrill.attempts_used + 1;
+    ? Math.max(baseAttempts, 3)
+    : baseAttempts + 1;
 
   const nowIso = new Date().toISOString();
 
   if (params.isCorrect) {
-    // Update AI Skill Rating & Topic Mastery on solve
     const { nextRating, nextMastery } = updateSkillModelAfterAttempt({
       currentRating: progressBefore.skill_rating,
       currentMastery,
@@ -458,7 +503,6 @@ export async function recordDrillAttempt(params: {
       ]
     );
 
-    // Keep current_level unchanged, reset streak to 0, update AI mastery weights
     await db.runAsync(
       `UPDATE user_progress
        SET streak = 0,
@@ -469,10 +513,11 @@ export async function recordDrillAttempt(params: {
       [params.date, nextRating, JSON.stringify(nextMastery)]
     );
   } else {
-    // Still has attempts left
+    // Attempts 1 or 2 wrong: keep status = 'PENDING' and increment attempts_used
     await db.runAsync(
       `UPDATE drill_history
        SET user_answer = ?,
+           status = 'PENDING',
            attempts_used = ?,
            duration_seconds = ?
        WHERE date = ?;`,
@@ -517,6 +562,22 @@ export async function updateNotificationTime(
 }
 
 /**
+ * Persists the "Do not show again" onboarding popup preference in SQLite.
+ */
+export async function updateOnboardingPreference(
+  hideModal: boolean
+): Promise<UserProgress> {
+  const db = await getDatabase();
+  await db.runAsync(
+    `UPDATE user_progress
+     SET hide_onboarding_modal = ?
+     WHERE id = 1;`,
+    [hideModal ? 1 : 0]
+  );
+  return await getUserProgress();
+}
+
+/**
  * Exports the entire database state as a serialized JSON object for manual backup.
  */
 export async function exportDatabaseBackup(): Promise<string> {
@@ -540,9 +601,7 @@ export async function exportDatabaseBackup(): Promise<string> {
 export async function resetAllProgress(): Promise<UserProgress> {
   const db = await getDatabase();
   const defaultMasteryJson = JSON.stringify(DEFAULT_TOPIC_MASTERY);
-  await db.runAsync(
-    `DELETE FROM drill_history;`
-  );
+  await db.runAsync(`DELETE FROM drill_history;`);
   await db.runAsync(
     `UPDATE user_progress
      SET current_level = 1,

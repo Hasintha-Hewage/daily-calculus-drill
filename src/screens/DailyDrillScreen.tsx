@@ -36,6 +36,7 @@ export const DailyDrillScreen: React.FC = () => {
     elapsedSeconds,
     submitAnswer,
     giveUpToday,
+    retryCurrentProblem,
     changeDifficulty,
     generateNewAIProblem,
   } = useDrill();
@@ -265,7 +266,9 @@ export const DailyDrillScreen: React.FC = () => {
 
           {/* Attempts Indicator */}
           <View style={styles.attemptsRow}>
-            <Text style={styles.attemptsLabel}>Attempts Remaining:</Text>
+            <Text style={styles.attemptsLabel}>
+              Attempts Remaining: {attemptsRemaining} / 3
+            </Text>
             <View style={styles.dotsRow}>
               {[1, 2, 3].map((idx) => (
                 <View
@@ -438,6 +441,23 @@ export const DailyDrillScreen: React.FC = () => {
                 Input form: {todayProblem.correctAnswer}
               </Text>
             </View>
+
+            {todayDrill.status === 'FAILED' && (
+              <TouchableOpacity
+                style={[styles.practiceAnotherBtn, { backgroundColor: '#334155', marginBottom: 10 }]}
+                onPress={async () => {
+                  setFeedbackMessage(null);
+                  setAnswerInput('');
+                  await retryCurrentProblem();
+                }}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="refresh-outline" size={18} color="#F8FAFC" />
+                <Text style={styles.practiceAnotherBtnText}>
+                  Retry This Question (Reset 3 Attempts)
+                </Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               style={styles.practiceAnotherBtn}

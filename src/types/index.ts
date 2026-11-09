@@ -33,6 +33,7 @@ export interface UserProgress {
   selected_difficulty: SkillDifficulty; // User-selected experience tier
   skill_rating: number;             // Adaptive Elo-style rating (400 - 2400)
   topic_mastery_json: string;       // JSON string of TopicMasteryMap (0.0 - 1.0 per topic)
+  hide_onboarding_modal: number;    // 0 = show on startup, 1 = do not show again
 }
 
 /**
