@@ -15,7 +15,7 @@ import {
   formatNotificationTime,
   sendTestDrillNotification,
 } from '../services/notificationService';
-import { CalculusTopicKey, SkillDifficulty } from '../types';
+import { CalculusTopicKey, SkillDifficulty, ThemeMode } from '../types';
 
 const TIME_PRESETS = [
   { label: '06:30 AM', hour: 6, minute: 30 },
@@ -43,7 +43,10 @@ const TOPIC_LABELS: { key: CalculusTopicKey; label: string }[] = [
 export const SettingsScreen: React.FC = () => {
   const {
     progress,
+    themeMode,
+    themeColors,
     topicMastery,
+    changeThemeMode,
     changeDifficulty,
     updateReminderSchedule,
     exportBackupJson,
@@ -64,6 +67,13 @@ export const SettingsScreen: React.FC = () => {
 
   const adjustMinute = (delta: number) => {
     setSelectedMinute((prev) => (prev + delta + 60) % 60);
+  };
+
+  const handleThemeSelect = async (mode: ThemeMode) => {
+    await changeThemeMode(mode);
+    setStatusBanner(
+      `Switched to ${mode === 'DARK' ? 'Dark' : 'Light'} Theme.`
+    );
   };
 
   const handleDifficultyChange = async (diff: SkillDifficulty) => {
@@ -129,26 +139,169 @@ export const SettingsScreen: React.FC = () => {
 
   return (
     <ScrollView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: themeColors.background }]}
       contentContainerStyle={styles.content}
     >
       {statusBanner && (
         <View style={styles.statusBanner}>
-          <Ionicons name="checkmark-circle" size={18} color="#34D399" />
+          <Ionicons name="checkmark-circle" size={18} color="#10B981" />
           <Text style={styles.statusBannerText}>{statusBanner}</Text>
         </View>
       )}
 
-      {/* Local AI Experience & Topic Mastery Card */}
-      <View style={styles.card}>
+      {/* App Appearance / Theme Radio Section */}
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: themeColors.card, borderColor: themeColors.border },
+        ]}
+      >
         <View style={styles.cardHeader}>
-          <Ionicons name="sparkles-outline" size={22} color="#A5B4FC" />
-          <Text style={styles.cardTitle}>
+          <Ionicons
+            name={themeMode === 'DARK' ? 'moon-outline' : 'sunny-outline'}
+            size={22}
+            color={themeColors.primaryText}
+          />
+          <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]}>
+            App Theme
+          </Text>
+        </View>
+        <Text style={[styles.cardSubtitle, { color: themeColors.textMuted }]}>
+          Switch between Dark (default) and Light appearance.
+        </Text>
+
+        {/* Radio Option: Dark Theme */}
+        <TouchableOpacity
+          style={[
+            styles.radioOptionRow,
+            {
+              backgroundColor: themeColors.innerBox,
+              borderColor:
+                themeMode === 'DARK' ? themeColors.primary : themeColors.border,
+            },
+          ]}
+          onPress={() => handleThemeSelect('DARK')}
+          activeOpacity={0.75}
+        >
+          <View style={styles.radioLeft}>
+            <View
+              style={[
+                styles.radioOuterCircle,
+                {
+                  borderColor:
+                    themeMode === 'DARK'
+                      ? themeColors.primary
+                      : themeColors.textMuted,
+                },
+              ]}
+            >
+              {themeMode === 'DARK' && (
+                <View
+                  style={[
+                    styles.radioInnerDot,
+                    { backgroundColor: themeColors.primary },
+                  ]}
+                />
+              )}
+            </View>
+            <View>
+              <Text
+                style={[styles.radioLabel, { color: themeColors.textPrimary }]}
+              >
+                Dark Theme (Default)
+              </Text>
+              <Text
+                style={[styles.radioSublabel, { color: themeColors.textMuted }]}
+              >
+                Easy on the eyes for early morning drills
+              </Text>
+            </View>
+          </View>
+          <Ionicons
+            name="moon"
+            size={18}
+            color={
+              themeMode === 'DARK' ? themeColors.primaryText : themeColors.textMuted
+            }
+          />
+        </TouchableOpacity>
+
+        {/* Radio Option: Light Theme */}
+        <TouchableOpacity
+          style={[
+            styles.radioOptionRow,
+            {
+              backgroundColor: themeColors.innerBox,
+              borderColor:
+                themeMode === 'LIGHT' ? themeColors.primary : themeColors.border,
+            },
+          ]}
+          onPress={() => handleThemeSelect('LIGHT')}
+          activeOpacity={0.75}
+        >
+          <View style={styles.radioLeft}>
+            <View
+              style={[
+                styles.radioOuterCircle,
+                {
+                  borderColor:
+                    themeMode === 'LIGHT'
+                      ? themeColors.primary
+                      : themeColors.textMuted,
+                },
+              ]}
+            >
+              {themeMode === 'LIGHT' && (
+                <View
+                  style={[
+                    styles.radioInnerDot,
+                    { backgroundColor: themeColors.primary },
+                  ]}
+                />
+              )}
+            </View>
+            <View>
+              <Text
+                style={[styles.radioLabel, { color: themeColors.textPrimary }]}
+              >
+                Light Theme
+              </Text>
+              <Text
+                style={[styles.radioSublabel, { color: themeColors.textMuted }]}
+              >
+                Clean, high-contrast paper look
+              </Text>
+            </View>
+          </View>
+          <Ionicons
+            name="sunny"
+            size={19}
+            color={themeMode === 'LIGHT' ? '#F59E0B' : themeColors.textMuted}
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* Local AI Experience & Topic Mastery Card */}
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: themeColors.card, borderColor: themeColors.border },
+        ]}
+      >
+        <View style={styles.cardHeader}>
+          <Ionicons
+            name="sparkles-outline"
+            size={22}
+            color={themeColors.primaryText}
+          />
+          <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]}>
             On-Device AI Skill & Difficulty
           </Text>
         </View>
-        <Text style={styles.cardSubtitle}>
-          Select your calculus experience level. The local Neuro-Symbolic AI model adapts problem difficulty and targets your weakest topics automatically.
+        <Text style={[styles.cardSubtitle, { color: themeColors.textMuted }]}>
+          Select your calculus experience level. The local Neuro-Symbolic AI
+          model adapts problem difficulty and targets your weakest topics
+          automatically.
         </Text>
 
         {DIFFICULTY_LIST.map((diffKey) => {
@@ -159,6 +312,12 @@ export const SettingsScreen: React.FC = () => {
               key={diffKey}
               style={[
                 styles.diffOptionCard,
+                {
+                  backgroundColor: themeColors.innerBox,
+                  borderColor: active
+                    ? themeColors.primary
+                    : themeColors.border,
+                },
                 active && styles.diffOptionCardActive,
               ]}
               onPress={() => handleDifficultyChange(diffKey)}
@@ -168,7 +327,11 @@ export const SettingsScreen: React.FC = () => {
                 <Text
                   style={[
                     styles.diffOptionTitle,
-                    active && styles.diffOptionTitleActive,
+                    {
+                      color: active
+                        ? themeColors.primaryText
+                        : themeColors.textPrimary,
+                    },
                   ]}
                 >
                   {cfg.label}
@@ -177,22 +340,44 @@ export const SettingsScreen: React.FC = () => {
                   <Ionicons
                     name="checkmark-circle"
                     size={18}
-                    color="#818CF8"
+                    color={themeColors.primary}
                   />
                 )}
               </View>
-              <Text style={styles.diffOptionDesc}>{cfg.description}</Text>
+              <Text
+                style={[styles.diffOptionDesc, { color: themeColors.textMuted }]}
+              >
+                {cfg.description}
+              </Text>
             </TouchableOpacity>
           );
         })}
 
         {/* Per-Topic Mastery Progress Bars */}
-        <View style={styles.masteryBox}>
+        <View
+          style={[
+            styles.masteryBox,
+            {
+              backgroundColor: themeColors.innerBox,
+              borderColor: themeColors.border,
+            },
+          ]}
+        >
           <View style={styles.masteryHeaderRow}>
-            <Text style={styles.masteryHeaderTitle}>
+            <Text
+              style={[
+                styles.masteryHeaderTitle,
+                { color: themeColors.textMuted },
+              ]}
+            >
               AI TOPIC MASTERY PROFILE
             </Text>
-            <Text style={styles.masteryEloBadge}>
+            <Text
+              style={[
+                styles.masteryEloBadge,
+                { color: themeColors.accentBlue },
+              ]}
+            >
               Skill Rating: {progress.skill_rating}
             </Text>
           </View>
@@ -202,10 +387,29 @@ export const SettingsScreen: React.FC = () => {
             return (
               <View key={key} style={styles.masteryRow}>
                 <View style={styles.masteryLabelRow}>
-                  <Text style={styles.masteryTopicText}>{label}</Text>
-                  <Text style={styles.masteryPctText}>{pct}%</Text>
+                  <Text
+                    style={[
+                      styles.masteryTopicText,
+                      { color: themeColors.textSecondary },
+                    ]}
+                  >
+                    {label}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.masteryPctText,
+                      { color: themeColors.textMuted },
+                    ]}
+                  >
+                    {pct}%
+                  </Text>
                 </View>
-                <View style={styles.masteryTrack}>
+                <View
+                  style={[
+                    styles.masteryTrack,
+                    { backgroundColor: themeColors.card },
+                  ]}
+                >
                   <View
                     style={[
                       styles.masteryFill,
@@ -228,59 +432,124 @@ export const SettingsScreen: React.FC = () => {
       </View>
 
       {/* Notification Time Picker Card */}
-      <View style={styles.card}>
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: themeColors.card, borderColor: themeColors.border },
+        ]}
+      >
         <View style={styles.cardHeader}>
-          <Ionicons name="notifications-outline" size={22} color="#818CF8" />
-          <Text style={styles.cardTitle}>Daily Notification Schedule</Text>
+          <Ionicons
+            name="notifications-outline"
+            size={22}
+            color={themeColors.primaryText}
+          />
+          <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]}>
+            Daily Notification Schedule
+          </Text>
         </View>
-        <Text style={styles.cardSubtitle}>
-          Choose when to receive your morning calculus challenge (Default: 07:00 AM).
+        <Text style={[styles.cardSubtitle, { color: themeColors.textMuted }]}>
+          Choose when to receive your morning calculus challenge (Default: 07:00
+          AM).
         </Text>
 
         {/* Stepper Time Picker */}
-        <View style={styles.pickerContainer}>
+        <View
+          style={[
+            styles.pickerContainer,
+            {
+              backgroundColor: themeColors.innerBox,
+              borderColor: themeColors.border,
+            },
+          ]}
+        >
           <View style={styles.stepperColumn}>
             <TouchableOpacity
-              style={styles.stepperBtn}
+              style={[
+                styles.stepperBtn,
+                { backgroundColor: themeColors.card },
+              ]}
               onPress={() => adjustHour(1)}
             >
-              <Ionicons name="chevron-up" size={20} color="#E2E8F0" />
+              <Ionicons
+                name="chevron-up"
+                size={20}
+                color={themeColors.textPrimary}
+              />
             </TouchableOpacity>
-            <Text style={styles.timeDigits}>
+            <Text
+              style={[styles.timeDigits, { color: themeColors.textPrimary }]}
+            >
               {String(selectedHour).padStart(2, '0')}
             </Text>
             <TouchableOpacity
-              style={styles.stepperBtn}
+              style={[
+                styles.stepperBtn,
+                { backgroundColor: themeColors.card },
+              ]}
               onPress={() => adjustHour(-1)}
             >
-              <Ionicons name="chevron-down" size={20} color="#E2E8F0" />
+              <Ionicons
+                name="chevron-down"
+                size={20}
+                color={themeColors.textPrimary}
+              />
             </TouchableOpacity>
-            <Text style={styles.unitLabel}>HOUR (24H)</Text>
+            <Text style={[styles.unitLabel, { color: themeColors.textMuted }]}>
+              HOUR (24H)
+            </Text>
           </View>
 
-          <Text style={styles.colonSeparator}>:</Text>
+          <Text
+            style={[styles.colonSeparator, { color: themeColors.textMuted }]}
+          >
+            :
+          </Text>
 
           <View style={styles.stepperColumn}>
             <TouchableOpacity
-              style={styles.stepperBtn}
+              style={[
+                styles.stepperBtn,
+                { backgroundColor: themeColors.card },
+              ]}
               onPress={() => adjustMinute(5)}
             >
-              <Ionicons name="chevron-up" size={20} color="#E2E8F0" />
+              <Ionicons
+                name="chevron-up"
+                size={20}
+                color={themeColors.textPrimary}
+              />
             </TouchableOpacity>
-            <Text style={styles.timeDigits}>
+            <Text
+              style={[styles.timeDigits, { color: themeColors.textPrimary }]}
+            >
               {String(selectedMinute).padStart(2, '0')}
             </Text>
             <TouchableOpacity
-              style={styles.stepperBtn}
+              style={[
+                styles.stepperBtn,
+                { backgroundColor: themeColors.card },
+              ]}
               onPress={() => adjustMinute(-5)}
             >
-              <Ionicons name="chevron-down" size={20} color="#E2E8F0" />
+              <Ionicons
+                name="chevron-down"
+                size={20}
+                color={themeColors.textPrimary}
+              />
             </TouchableOpacity>
-            <Text style={styles.unitLabel}>MINUTE</Text>
+            <Text style={[styles.unitLabel, { color: themeColors.textMuted }]}>
+              MINUTE
+            </Text>
           </View>
         </View>
 
-        <Text style={styles.formattedTimePreview}>
+        <Text
+          style={[
+            styles.formattedTimePreview,
+            { color: themeColors.primaryText },
+          ]}
+        >
           Selected: {formatNotificationTime(selectedHour, selectedMinute)}
         </Text>
 
@@ -292,13 +561,26 @@ export const SettingsScreen: React.FC = () => {
             return (
               <TouchableOpacity
                 key={preset.label}
-                style={[styles.presetChip, active && styles.presetChipActive]}
+                style={[
+                  styles.presetChip,
+                  {
+                    backgroundColor: themeColors.innerBox,
+                    borderColor: active
+                      ? themeColors.primary
+                      : themeColors.border,
+                  },
+                  active && styles.presetChipActive,
+                ]}
                 onPress={() => handlePresetSelect(preset.hour, preset.minute)}
               >
                 <Text
                   style={[
                     styles.presetChipText,
-                    active && styles.presetChipTextActive,
+                    {
+                      color: active
+                        ? themeColors.primaryText
+                        : themeColors.textMuted,
+                    },
                   ]}
                 >
                   {preset.label}
@@ -309,7 +591,7 @@ export const SettingsScreen: React.FC = () => {
         </View>
 
         <TouchableOpacity
-          style={styles.primaryBtn}
+          style={[styles.primaryBtn, { backgroundColor: themeColors.primary }]}
           onPress={handleSaveSchedule}
         >
           <Ionicons name="alarm-outline" size={18} color="#FFFFFF" />
@@ -317,32 +599,65 @@ export const SettingsScreen: React.FC = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.secondaryBtn}
+          style={[
+            styles.secondaryBtn,
+            { borderColor: themeColors.primary },
+          ]}
           onPress={handleTestNotification}
         >
-          <Ionicons name="paper-plane-outline" size={16} color="#A5B4FC" />
-          <Text style={styles.secondaryBtnText}>
+          <Ionicons
+            name="paper-plane-outline"
+            size={16}
+            color={themeColors.primaryText}
+          />
+          <Text
+            style={[
+              styles.secondaryBtnText,
+              { color: themeColors.primaryText },
+            ]}
+          >
             Send Test Notification Now
           </Text>
         </TouchableOpacity>
       </View>
 
       {/* Data Management Card */}
-      <View style={styles.card}>
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: themeColors.card, borderColor: themeColors.border },
+        ]}
+      >
         <View style={styles.cardHeader}>
-          <Ionicons name="server-outline" size={22} color="#38BDF8" />
-          <Text style={styles.cardTitle}>Data & Progress Management</Text>
+          <Ionicons
+            name="server-outline"
+            size={22}
+            color={themeColors.accentBlue}
+          />
+          <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]}>
+            Data & Progress Management
+          </Text>
         </View>
-        <Text style={styles.cardSubtitle}>
-          All progress, AI mastery weights, and history are stored locally in SQLite on your device.
+        <Text style={[styles.cardSubtitle, { color: themeColors.textMuted }]}>
+          All progress, AI mastery weights, and history are stored locally in
+          SQLite on your device.
         </Text>
 
         <TouchableOpacity
-          style={styles.backupBtn}
+          style={[
+            styles.backupBtn,
+            { borderColor: themeColors.accentBlue },
+          ]}
           onPress={handleBackupData}
         >
-          <Ionicons name="download-outline" size={18} color="#38BDF8" />
-          <Text style={styles.backupBtnText}>
+          <Ionicons
+            name="download-outline"
+            size={18}
+            color={themeColors.accentBlue}
+          />
+          <Text
+            style={[styles.backupBtnText, { color: themeColors.accentBlue }]}
+          >
             Export / Backup SQLite Data (JSON)
           </Text>
         </TouchableOpacity>
@@ -351,7 +666,7 @@ export const SettingsScreen: React.FC = () => {
           style={styles.dangerBtn}
           onPress={handleResetProgress}
         >
-          <Ionicons name="trash-outline" size={18} color="#F87171" />
+          <Ionicons name="trash-outline" size={18} color="#EF4444" />
           <Text style={styles.dangerBtnText}>Reset All Progress to Level 1</Text>
         </TouchableOpacity>
       </View>
@@ -362,7 +677,6 @@ export const SettingsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
   },
   content: {
     padding: 20,
@@ -380,17 +694,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   statusBannerText: {
-    color: '#6EE7B7',
+    color: '#10B981',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     flex: 1,
   },
   card: {
-    backgroundColor: '#1E293B',
     borderRadius: 18,
     padding: 18,
     borderWidth: 1,
-    borderColor: '#334155',
     marginBottom: 18,
   },
   cardHeader: {
@@ -400,27 +712,58 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   cardTitle: {
-    color: '#F8FAFC',
     fontSize: 17,
     fontWeight: '800',
   },
   cardSubtitle: {
-    color: '#94A3B8',
     fontSize: 13,
     lineHeight: 19,
     marginBottom: 14,
   },
+  radioOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    marginBottom: 10,
+  },
+  radioLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  radioOuterCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioInnerDot: {
+    width: 11,
+    height: 11,
+    borderRadius: 5.5,
+  },
+  radioLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  radioSublabel: {
+    fontSize: 12,
+    marginTop: 2,
+  },
   diffOptionCard: {
-    backgroundColor: '#0F172A',
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#334155',
     marginBottom: 8,
   },
   diffOptionCardActive: {
-    backgroundColor: 'rgba(99, 102, 241, 0.16)',
-    borderColor: '#6366F1',
+    backgroundColor: 'rgba(99, 102, 241, 0.12)',
   },
   diffOptionHeader: {
     flexDirection: 'row',
@@ -429,25 +772,17 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   diffOptionTitle: {
-    color: '#E2E8F0',
     fontSize: 14,
     fontWeight: '700',
   },
-  diffOptionTitleActive: {
-    color: '#A5B4FC',
-    fontWeight: '800',
-  },
   diffOptionDesc: {
-    color: '#94A3B8',
     fontSize: 12,
   },
   masteryBox: {
     marginTop: 10,
-    backgroundColor: '#0F172A',
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#334155',
   },
   masteryHeaderRow: {
     flexDirection: 'row',
@@ -456,13 +791,11 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   masteryHeaderTitle: {
-    color: '#94A3B8',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.6,
   },
   masteryEloBadge: {
-    color: '#38BDF8',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -475,19 +808,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   masteryTopicText: {
-    color: '#CBD5E1',
     fontSize: 12,
     fontWeight: '600',
   },
   masteryPctText: {
-    color: '#94A3B8',
     fontSize: 12,
     fontWeight: '700',
   },
   masteryTrack: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#1E293B',
     overflow: 'hidden',
   },
   masteryFill: {
@@ -498,12 +828,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0F172A',
     borderRadius: 14,
     paddingVertical: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#334155',
   },
   stepperColumn: {
     alignItems: 'center',
@@ -511,26 +839,22 @@ const styles = StyleSheet.create({
   },
   stepperBtn: {
     padding: 6,
-    backgroundColor: '#1E293B',
     borderRadius: 8,
     width: 48,
     alignItems: 'center',
   },
   timeDigits: {
-    color: '#F8FAFC',
     fontSize: 32,
     fontWeight: '800',
     marginVertical: 6,
     fontVariant: ['tabular-nums'],
   },
   unitLabel: {
-    color: '#64748B',
     fontSize: 10,
     fontWeight: '700',
     marginTop: 6,
   },
   colonSeparator: {
-    color: '#94A3B8',
     fontSize: 30,
     fontWeight: '800',
     marginHorizontal: 10,
@@ -538,7 +862,6 @@ const styles = StyleSheet.create({
   },
   formattedTimePreview: {
     textAlign: 'center',
-    color: '#A5B4FC',
     fontSize: 14,
     fontWeight: '700',
     marginBottom: 12,
@@ -551,28 +874,19 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   presetChip: {
-    backgroundColor: '#0F172A',
     borderWidth: 1,
-    borderColor: '#334155',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
   presetChipActive: {
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
-    borderColor: '#6366F1',
+    backgroundColor: 'rgba(99, 102, 241, 0.14)',
   },
   presetChipText: {
-    color: '#94A3B8',
     fontSize: 12,
     fontWeight: '600',
   },
-  presetChipTextActive: {
-    color: '#A5B4FC',
-    fontWeight: '700',
-  },
   primaryBtn: {
-    backgroundColor: '#6366F1',
     borderRadius: 12,
     paddingVertical: 13,
     flexDirection: 'row',
@@ -587,9 +901,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   secondaryBtn: {
-    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
     borderWidth: 1,
-    borderColor: '#6366F1',
     borderRadius: 12,
     paddingVertical: 11,
     flexDirection: 'row',
@@ -598,14 +911,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   secondaryBtnText: {
-    color: '#A5B4FC',
     fontSize: 14,
     fontWeight: '600',
   },
   backupBtn: {
-    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    backgroundColor: 'rgba(56, 189, 248, 0.1)',
     borderWidth: 1,
-    borderColor: '#38BDF8',
     borderRadius: 12,
     paddingVertical: 13,
     flexDirection: 'row',
@@ -615,12 +926,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   backupBtnText: {
-    color: '#38BDF8',
     fontSize: 14,
     fontWeight: '700',
   },
   dangerBtn: {
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
     borderWidth: 1,
     borderColor: '#EF4444',
     borderRadius: 12,
@@ -631,7 +941,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dangerBtnText: {
-    color: '#F87171',
+    color: '#EF4444',
     fontSize: 14,
     fontWeight: '700',
   },

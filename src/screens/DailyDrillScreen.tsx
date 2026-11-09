@@ -31,6 +31,7 @@ export const DailyDrillScreen: React.FC = () => {
   const {
     isLoading,
     progress,
+    themeColors,
     todayDrill,
     todayProblem,
     elapsedSeconds,
@@ -119,7 +120,7 @@ export const DailyDrillScreen: React.FC = () => {
         outcome.verification.errorMessage || 'Incorrect expression.';
       if (outcome.statusAfterAttempt === 'FAILED') {
         setFeedbackMessage(
-          'Out of attempts. Review the solution below or tap "New AI Question" to practice more!'
+          'Out of attempts. Review the solution below or tap "New AI Q" to practice more!'
         );
       } else {
         setFeedbackMessage(
@@ -147,9 +148,14 @@ export const DailyDrillScreen: React.FC = () => {
 
   if (isLoading || !todayDrill || !todayProblem) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#6366F1" />
-        <Text style={styles.loadingText}>
+      <View
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: themeColors.background },
+        ]}
+      >
+        <ActivityIndicator size="large" color={themeColors.primary} />
+        <Text style={[styles.loadingText, { color: themeColors.textMuted }]}>
           Synthesizing Personalized AI Calculus Drill...
         </Text>
       </View>
@@ -162,7 +168,7 @@ export const DailyDrillScreen: React.FC = () => {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: themeColors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
@@ -171,14 +177,46 @@ export const DailyDrillScreen: React.FC = () => {
       >
         {/* Top Header: Level, Timer & Streak Badges */}
         <View style={styles.headerRow}>
-          <View style={styles.levelBadge}>
-            <Ionicons name="school-outline" size={18} color="#818CF8" />
-            <Text style={styles.levelBadgeText}>LEVEL {todayDrill.level}</Text>
+          <View
+            style={[
+              styles.levelBadge,
+              { borderColor: themeColors.primary },
+            ]}
+          >
+            <Ionicons
+              name="school-outline"
+              size={18}
+              color={themeColors.primaryText}
+            />
+            <Text
+              style={[
+                styles.levelBadgeText,
+                { color: themeColors.primaryText },
+              ]}
+            >
+              LEVEL {todayDrill.level}
+            </Text>
           </View>
 
-          <View style={styles.timerChip}>
-            <Ionicons name="time-outline" size={16} color="#94A3B8" />
-            <Text style={styles.timerText}>{formatDuration(elapsedSeconds)}</Text>
+          <View
+            style={[
+              styles.timerChip,
+              {
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+              },
+            ]}
+          >
+            <Ionicons
+              name="time-outline"
+              size={16}
+              color={themeColors.textMuted}
+            />
+            <Text
+              style={[styles.timerText, { color: themeColors.textSecondary }]}
+            >
+              {formatDuration(elapsedSeconds)}
+            </Text>
           </View>
 
           <View style={styles.streakBadge}>
@@ -190,15 +228,34 @@ export const DailyDrillScreen: React.FC = () => {
         </View>
 
         {/* User Skill Experience / Difficulty Selector */}
-        <View style={styles.difficultyCard}>
+        <View
+          style={[
+            styles.difficultyCard,
+            {
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            },
+          ]}
+        >
           <View style={styles.difficultyHeaderRow}>
             <View style={styles.difficultyTitleWrap}>
-              <Ionicons name="sparkles" size={15} color="#A5B4FC" />
-              <Text style={styles.difficultyTitle}>
+              <Ionicons
+                name="sparkles"
+                size={15}
+                color={themeColors.primaryText}
+              />
+              <Text
+                style={[
+                  styles.difficultyTitle,
+                  { color: themeColors.primaryText },
+                ]}
+              >
                 YOUR EXPERIENCE LEVEL (LOCAL AI)
               </Text>
             </View>
-            <Text style={styles.ratingText}>
+            <Text
+              style={[styles.ratingText, { color: themeColors.accentBlue }]}
+            >
               Skill Elo: {progress.skill_rating}
             </Text>
           </View>
@@ -212,6 +269,12 @@ export const DailyDrillScreen: React.FC = () => {
                   key={diffKey}
                   style={[
                     styles.diffPill,
+                    {
+                      backgroundColor: themeColors.innerBox,
+                      borderColor: isSelected
+                        ? themeColors.primary
+                        : themeColors.border,
+                    },
                     isSelected && styles.diffPillActive,
                   ]}
                   onPress={() => handleSelectDifficulty(diffKey)}
@@ -220,6 +283,11 @@ export const DailyDrillScreen: React.FC = () => {
                   <Text
                     style={[
                       styles.diffPillText,
+                      {
+                        color: isSelected
+                          ? themeColors.primaryText
+                          : themeColors.textMuted,
+                      },
                       isSelected && styles.diffPillTextActive,
                     ]}
                   >
@@ -231,42 +299,91 @@ export const DailyDrillScreen: React.FC = () => {
           </View>
 
           {/* AI Reasoning & Refresh Row */}
-          <View style={styles.aiInsightRow}>
-            <Text style={styles.aiReasoningText} numberOfLines={2}>
+          <View
+            style={[
+              styles.aiInsightRow,
+              { backgroundColor: themeColors.innerBox },
+            ]}
+          >
+            <Text
+              style={[
+                styles.aiReasoningText,
+                { color: themeColors.textSecondary },
+              ]}
+              numberOfLines={2}
+            >
               {todayProblem.aiReasoning}
             </Text>
             <TouchableOpacity
-              style={styles.newAiBtn}
+              style={[
+                styles.newAiBtn,
+                { borderColor: themeColors.accentBlue },
+              ]}
               onPress={handleGenerateNewAI}
               activeOpacity={0.75}
             >
-              <Ionicons name="refresh" size={14} color="#38BDF8" />
-              <Text style={styles.newAiBtnText}>New AI Q</Text>
+              <Ionicons
+                name="refresh"
+                size={14}
+                color={themeColors.accentBlue}
+              />
+              <Text
+                style={[
+                  styles.newAiBtnText,
+                  { color: themeColors.accentBlue },
+                ]}
+              >
+                New AI Q
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Category & Date Subheader */}
         <View style={styles.metaRow}>
-          <Text style={styles.categoryTag}>{todayProblem.category}</Text>
-          <Text style={styles.dateText}>{todayDrill.date}</Text>
+          <Text style={[styles.categoryTag, { color: themeColors.textMuted }]}>
+            {todayProblem.category}
+          </Text>
+          <Text style={[styles.dateText, { color: themeColors.textMuted }]}>
+            {todayDrill.date}
+          </Text>
         </View>
 
         {/* Problem LaTeX Card */}
-        <View style={styles.problemCard}>
-          <Text style={styles.promptLabel}>{todayProblem.promptText}</Text>
-          <View style={styles.equationBox}>
+        <View
+          style={[
+            styles.problemCard,
+            {
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            },
+          ]}
+        >
+          <Text style={[styles.promptLabel, { color: themeColors.textMuted }]}>
+            {todayProblem.promptText}
+          </Text>
+          <View
+            style={[
+              styles.equationBox,
+              {
+                backgroundColor: themeColors.innerBox,
+                borderColor: themeColors.border,
+              },
+            ]}
+          >
             <MathRenderer
               latex={todayProblem.problemLatex}
               fontSize={28}
-              color="#F8FAFC"
+              color={themeColors.mathText}
               height={95}
             />
           </View>
 
           {/* Attempts Indicator */}
           <View style={styles.attemptsRow}>
-            <Text style={styles.attemptsLabel}>
+            <Text
+              style={[styles.attemptsLabel, { color: themeColors.textMuted }]}
+            >
               Attempts Remaining: {attemptsRemaining} / 3
             </Text>
             <View style={styles.dotsRow}>
@@ -276,8 +393,8 @@ export const DailyDrillScreen: React.FC = () => {
                   style={[
                     styles.attemptDot,
                     idx <= attemptsRemaining
-                      ? styles.attemptDotActive
-                      : styles.attemptDotSpent,
+                      ? { backgroundColor: themeColors.primary }
+                      : { backgroundColor: themeColors.border },
                   ]}
                 />
               ))}
@@ -287,26 +404,47 @@ export const DailyDrillScreen: React.FC = () => {
 
         {/* Hint Accordion */}
         <TouchableOpacity
-          style={styles.hintToggle}
+          style={[
+            styles.hintToggle,
+            {
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            },
+          ]}
           onPress={() => setShowHint((prev) => !prev)}
           activeOpacity={0.75}
         >
           <View style={styles.hintToggleLeft}>
-            <Ionicons name="bulb-outline" size={18} color="#FBBF24" />
-            <Text style={styles.hintToggleText}>
+            <Ionicons name="bulb-outline" size={18} color="#F59E0B" />
+            <Text
+              style={[
+                styles.hintToggleText,
+                { color: themeColors.textPrimary },
+              ]}
+            >
               {showHint ? 'Hide AI Step-by-Step Hint' : 'Need an AI Hint?'}
             </Text>
           </View>
           <Ionicons
             name={showHint ? 'chevron-up' : 'chevron-down'}
             size={18}
-            color="#94A3B8"
+            color={themeColors.textMuted}
           />
         </TouchableOpacity>
 
         {showHint && (
           <View style={styles.hintBox}>
-            <Text style={styles.hintText}>{todayProblem.hint}</Text>
+            <Text
+              style={[
+                styles.hintText,
+                {
+                  color:
+                    themeColors.mode === 'DARK' ? '#FDE68A' : '#92400E',
+                },
+              ]}
+            >
+              {todayProblem.hint}
+            </Text>
           </View>
         )}
 
@@ -318,10 +456,17 @@ export const DailyDrillScreen: React.FC = () => {
               { transform: [{ translateX: shakeAnim }] },
             ]}
           >
-            <Text style={styles.inputLabel}>YOUR EXPRESSION</Text>
+            <Text style={[styles.inputLabel, { color: themeColors.textMuted }]}>
+              YOUR EXPRESSION
+            </Text>
             <TextInput
               style={[
                 styles.mathInput,
+                {
+                  backgroundColor: themeColors.card,
+                  borderColor: themeColors.border,
+                  color: themeColors.textPrimary,
+                },
                 feedbackMessage ? styles.mathInputError : null,
               ]}
               value={answerInput}
@@ -334,7 +479,7 @@ export const DailyDrillScreen: React.FC = () => {
                   ? 'e.g., x^2 + C'
                   : 'e.g., 3*x^2'
               }
-              placeholderTextColor="#64748B"
+              placeholderTextColor={themeColors.textMuted}
               autoCapitalize="none"
               autoCorrect={false}
               returnKeyType="done"
@@ -343,12 +488,27 @@ export const DailyDrillScreen: React.FC = () => {
 
             {/* Live LaTeX Preview of User Input */}
             {answerInput.trim().length > 0 && (
-              <View style={styles.previewBox}>
-                <Text style={styles.previewCaption}>Live Preview:</Text>
+              <View
+                style={[
+                  styles.previewBox,
+                  {
+                    backgroundColor: themeColors.card,
+                    borderColor: themeColors.border,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.previewCaption,
+                    { color: themeColors.textMuted },
+                  ]}
+                >
+                  Live Preview:
+                </Text>
                 <MathRenderer
                   latex={userInputToLatex(answerInput)}
                   fontSize={20}
-                  color="#CBD5E1"
+                  color={themeColors.mathText}
                   height={52}
                 />
               </View>
@@ -357,7 +517,7 @@ export const DailyDrillScreen: React.FC = () => {
             {/* Error / Warning Message */}
             {feedbackMessage && (
               <View style={styles.errorBanner}>
-                <Ionicons name="alert-circle" size={18} color="#F87171" />
+                <Ionicons name="alert-circle" size={18} color="#EF4444" />
                 <Text style={styles.errorBannerText}>{feedbackMessage}</Text>
               </View>
             )}
@@ -370,7 +530,10 @@ export const DailyDrillScreen: React.FC = () => {
 
             {/* Primary Submit Button */}
             <TouchableOpacity
-              style={styles.submitButton}
+              style={[
+                styles.submitButton,
+                { backgroundColor: themeColors.primary },
+              ]}
               onPress={handleSubmit}
               activeOpacity={0.85}
             >
@@ -384,7 +547,12 @@ export const DailyDrillScreen: React.FC = () => {
               onPress={handleGiveUp}
               activeOpacity={0.75}
             >
-              <Text style={styles.giveUpButtonText}>
+              <Text
+                style={[
+                  styles.giveUpButtonText,
+                  { color: themeColors.textMuted },
+                ]}
+              >
                 Give Up / Show Answer
               </Text>
             </TouchableOpacity>
@@ -406,14 +574,14 @@ export const DailyDrillScreen: React.FC = () => {
                     : 'close-circle'
                 }
                 size={28}
-                color={todayDrill.status === 'SOLVED' ? '#34D399' : '#F87171'}
+                color={todayDrill.status === 'SOLVED' ? '#10B981' : '#EF4444'}
               />
               <Text
                 style={[
                   styles.resultTitle,
                   {
                     color:
-                      todayDrill.status === 'SOLVED' ? '#34D399' : '#F87171',
+                      todayDrill.status === 'SOLVED' ? '#10B981' : '#EF4444',
                   },
                 ]}
               >
@@ -423,28 +591,56 @@ export const DailyDrillScreen: React.FC = () => {
               </Text>
             </View>
 
-            <Text style={styles.resultSubtext}>
+            <Text
+              style={[
+                styles.resultSubtext,
+                { color: themeColors.textSecondary },
+              ]}
+            >
               {todayDrill.status === 'SOLVED'
                 ? `Awesome work! Your AI Skill Rating is now ${progress.skill_rating} and you advanced to Level ${progress.current_level}.`
                 : `Your AI Skill Rating adjusted to ${progress.skill_rating}. Review the canonical answer below or generate another AI puzzle!`}
             </Text>
 
-            <View style={styles.canonicalSolutionBox}>
-              <Text style={styles.canonicalLabel}>CANONICAL SOLUTION</Text>
+            <View
+              style={[
+                styles.canonicalSolutionBox,
+                {
+                  backgroundColor: themeColors.innerBox,
+                  borderColor: themeColors.border,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.canonicalLabel,
+                  { color: themeColors.textMuted },
+                ]}
+              >
+                CANONICAL SOLUTION
+              </Text>
               <MathRenderer
                 latex={todayProblem.correctAnswerLatex}
                 fontSize={24}
-                color="#F8FAFC"
+                color={themeColors.mathText}
                 height={68}
               />
-              <Text style={styles.canonicalAscii}>
+              <Text
+                style={[
+                  styles.canonicalAscii,
+                  { color: themeColors.textMuted },
+                ]}
+              >
                 Input form: {todayProblem.correctAnswer}
               </Text>
             </View>
 
             {todayDrill.status === 'FAILED' && (
               <TouchableOpacity
-                style={[styles.practiceAnotherBtn, { backgroundColor: '#334155', marginBottom: 10 }]}
+                style={[
+                  styles.practiceAnotherBtn,
+                  { backgroundColor: '#475569', marginBottom: 10 },
+                ]}
                 onPress={async () => {
                   setFeedbackMessage(null);
                   setAnswerInput('');
@@ -452,7 +648,7 @@ export const DailyDrillScreen: React.FC = () => {
                 }}
                 activeOpacity={0.8}
               >
-                <Ionicons name="refresh-outline" size={18} color="#F8FAFC" />
+                <Ionicons name="refresh-outline" size={18} color="#FFFFFF" />
                 <Text style={styles.practiceAnotherBtnText}>
                   Retry This Question (Reset 3 Attempts)
                 </Text>
@@ -460,7 +656,10 @@ export const DailyDrillScreen: React.FC = () => {
             )}
 
             <TouchableOpacity
-              style={styles.practiceAnotherBtn}
+              style={[
+                styles.practiceAnotherBtn,
+                { backgroundColor: themeColors.primary },
+              ]}
               onPress={handleGenerateNewAI}
               activeOpacity={0.8}
             >
@@ -481,41 +680,109 @@ export const DailyDrillScreen: React.FC = () => {
         onRequestClose={() => setShowSuccessModal(false)}
       >
         <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
+          <View
+            style={[
+              styles.modalCard,
+              {
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+              },
+            ]}
+          >
             <View style={styles.modalIconCircle}>
               <Ionicons name="trophy" size={38} color="#FBBF24" />
             </View>
-            <Text style={styles.modalTitle}>Level Up! 🎉</Text>
-            <Text style={styles.modalBody}>
+            <Text
+              style={[styles.modalTitle, { color: themeColors.textPrimary }]}
+            >
+              Level Up! 🎉
+            </Text>
+            <Text
+              style={[styles.modalBody, { color: themeColors.textSecondary }]}
+            >
               You solved Level {todayDrill.level} in{' '}
               {formatDuration(todayDrill.duration_seconds ?? elapsedSeconds)}!
             </Text>
 
-            <View style={styles.modalStatsRow}>
+            <View
+              style={[
+                styles.modalStatsRow,
+                { backgroundColor: themeColors.innerBox },
+              ]}
+            >
               <View style={styles.modalStatItem}>
-                <Text style={styles.modalStatValue}>
+                <Text
+                  style={[
+                    styles.modalStatValue,
+                    { color: themeColors.textPrimary },
+                  ]}
+                >
                   Level {progress.current_level}
                 </Text>
-                <Text style={styles.modalStatLabel}>Next Level</Text>
+                <Text
+                  style={[
+                    styles.modalStatLabel,
+                    { color: themeColors.textMuted },
+                  ]}
+                >
+                  Next Level
+                </Text>
               </View>
-              <View style={styles.modalStatDivider} />
+              <View
+                style={[
+                  styles.modalStatDivider,
+                  { backgroundColor: themeColors.border },
+                ]}
+              />
               <View style={styles.modalStatItem}>
-                <Text style={styles.modalStatValue}>
+                <Text
+                  style={[
+                    styles.modalStatValue,
+                    { color: themeColors.textPrimary },
+                  ]}
+                >
                   {progress.skill_rating} ⚡
                 </Text>
-                <Text style={styles.modalStatLabel}>AI Skill Rating</Text>
+                <Text
+                  style={[
+                    styles.modalStatLabel,
+                    { color: themeColors.textMuted },
+                  ]}
+                >
+                  AI Skill Rating
+                </Text>
               </View>
-              <View style={styles.modalStatDivider} />
+              <View
+                style={[
+                  styles.modalStatDivider,
+                  { backgroundColor: themeColors.border },
+                ]}
+              />
               <View style={styles.modalStatItem}>
-                <Text style={styles.modalStatValue}>
+                <Text
+                  style={[
+                    styles.modalStatValue,
+                    { color: themeColors.textPrimary },
+                  ]}
+                >
                   {progress.streak} 🔥
                 </Text>
-                <Text style={styles.modalStatLabel}>Streak</Text>
+                <Text
+                  style={[
+                    styles.modalStatLabel,
+                    { color: themeColors.textMuted },
+                  ]}
+                >
+                  Streak
+                </Text>
               </View>
             </View>
 
             <TouchableOpacity
-              style={styles.modalCloseBtn}
+              style={[
+                styles.modalCloseBtn,
+                { backgroundColor: themeColors.primary },
+              ]}
               onPress={() => setShowSuccessModal(false)}
             >
               <Text style={styles.modalCloseBtnText}>Continue</Text>
@@ -530,17 +797,14 @@ export const DailyDrillScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#0F172A',
     alignItems: 'center',
     justifyContent: 'center',
   },
   loadingText: {
     marginTop: 12,
-    color: '#94A3B8',
     fontSize: 15,
   },
   scrollContent: {
@@ -556,16 +820,14 @@ const styles = StyleSheet.create({
   levelBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(99, 102, 241, 0.16)',
+    backgroundColor: 'rgba(99, 102, 241, 0.14)',
     borderWidth: 1,
-    borderColor: '#6366F1',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
     gap: 6,
   },
   levelBadgeText: {
-    color: '#A5B4FC',
     fontWeight: '800',
     fontSize: 13,
     letterSpacing: 0.6,
@@ -573,14 +835,13 @@ const styles = StyleSheet.create({
   timerChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E293B',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 14,
+    borderWidth: 1,
     gap: 5,
   },
   timerText: {
-    color: '#CBD5E1',
     fontSize: 13,
     fontWeight: '600',
     fontVariant: ['tabular-nums'],
@@ -597,17 +858,15 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   streakBadgeText: {
-    color: '#FCD34D',
+    color: '#D97706',
     fontWeight: '800',
     fontSize: 13,
     letterSpacing: 0.5,
   },
   difficultyCard: {
-    backgroundColor: '#1E293B',
     borderRadius: 16,
     padding: 13,
     borderWidth: 1,
-    borderColor: '#334155',
     marginBottom: 14,
   },
   difficultyHeaderRow: {
@@ -622,13 +881,11 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   difficultyTitle: {
-    color: '#A5B4FC',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.6,
   },
   ratingText: {
-    color: '#38BDF8',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -639,25 +896,20 @@ const styles = StyleSheet.create({
   },
   diffPill: {
     flex: 1,
-    backgroundColor: '#0F172A',
     borderWidth: 1,
-    borderColor: '#334155',
     borderRadius: 10,
     paddingVertical: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   diffPillActive: {
-    backgroundColor: 'rgba(99, 102, 241, 0.25)',
-    borderColor: '#6366F1',
+    backgroundColor: 'rgba(99, 102, 241, 0.16)',
   },
   diffPillText: {
-    color: '#94A3B8',
     fontSize: 12,
     fontWeight: '600',
   },
   diffPillTextActive: {
-    color: '#F8FAFC',
     fontWeight: '800',
   },
   aiInsightRow: {
@@ -665,14 +917,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
-    backgroundColor: '#0F172A',
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
   aiReasoningText: {
     flex: 1,
-    color: '#CBD5E1',
     fontSize: 11.5,
     lineHeight: 16,
   },
@@ -680,15 +930,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(56, 189, 248, 0.14)',
+    backgroundColor: 'rgba(56, 189, 248, 0.12)',
     borderWidth: 1,
-    borderColor: '#38BDF8',
     paddingHorizontal: 9,
     paddingVertical: 6,
     borderRadius: 8,
   },
   newAiBtnText: {
-    color: '#38BDF8',
     fontSize: 11,
     fontWeight: '700',
   },
@@ -699,36 +947,29 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   categoryTag: {
-    color: '#94A3B8',
     fontSize: 13,
     fontWeight: '600',
   },
   dateText: {
-    color: '#64748B',
     fontSize: 12,
     fontWeight: '600',
   },
   problemCard: {
-    backgroundColor: '#1E293B',
     borderRadius: 18,
     padding: 18,
     borderWidth: 1,
-    borderColor: '#334155',
     marginBottom: 14,
   },
   promptLabel: {
-    color: '#94A3B8',
     fontSize: 13,
     fontWeight: '600',
     marginBottom: 8,
   },
   equationBox: {
-    backgroundColor: '#0F172A',
     borderRadius: 14,
     paddingVertical: 10,
     paddingHorizontal: 8,
     borderWidth: 1,
-    borderColor: '#1E293B',
     marginBottom: 14,
   },
   attemptsRow: {
@@ -737,7 +978,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   attemptsLabel: {
-    color: '#94A3B8',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -750,20 +990,14 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
   },
-  attemptDotActive: {
-    backgroundColor: '#6366F1',
-  },
-  attemptDotSpent: {
-    backgroundColor: '#334155',
-  },
   hintToggle: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1E293B',
     paddingHorizontal: 14,
     paddingVertical: 11,
     borderRadius: 12,
+    borderWidth: 1,
     marginBottom: 10,
   },
   hintToggleLeft: {
@@ -772,22 +1006,21 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   hintToggleText: {
-    color: '#E2E8F0',
     fontSize: 13,
     fontWeight: '600',
   },
   hintBox: {
-    backgroundColor: 'rgba(251, 191, 36, 0.1)',
+    backgroundColor: 'rgba(251, 191, 36, 0.14)',
     borderWidth: 1,
-    borderColor: 'rgba(251, 191, 36, 0.35)',
+    borderColor: 'rgba(245, 158, 11, 0.4)',
     borderRadius: 12,
     padding: 12,
     marginBottom: 14,
   },
   hintText: {
-    color: '#FDE68A',
     fontSize: 13,
     lineHeight: 19,
+    fontWeight: '500',
   },
   inputSection: {
     marginTop: 6,
@@ -795,18 +1028,14 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#94A3B8',
     letterSpacing: 0.8,
     marginBottom: 8,
   },
   mathInput: {
-    backgroundColor: '#1E293B',
     borderWidth: 1.5,
-    borderColor: '#475569',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    color: '#F8FAFC',
     fontSize: 18,
     fontWeight: '600',
   },
@@ -815,16 +1044,13 @@ const styles = StyleSheet.create({
   },
   previewBox: {
     marginTop: 10,
-    backgroundColor: '#1E293B',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: '#334155',
   },
   previewCaption: {
     fontSize: 11,
-    color: '#64748B',
     fontWeight: '600',
   },
   errorBanner: {
@@ -839,13 +1065,12 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   errorBannerText: {
-    color: '#FCA5A5',
+    color: '#EF4444',
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '600',
     flex: 1,
   },
   submitButton: {
-    backgroundColor: '#6366F1',
     borderRadius: 14,
     paddingVertical: 15,
     flexDirection: 'row',
@@ -866,7 +1091,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   giveUpButtonText: {
-    color: '#94A3B8',
     fontSize: 14,
     fontWeight: '600',
     textDecorationLine: 'underline',
@@ -896,34 +1120,28 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   resultSubtext: {
-    color: '#CBD5E1',
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 14,
   },
   canonicalSolutionBox: {
-    backgroundColor: '#0F172A',
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#334155',
     marginBottom: 14,
   },
   canonicalLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#94A3B8',
     letterSpacing: 0.8,
     marginBottom: 4,
   },
   canonicalAscii: {
-    color: '#94A3B8',
     fontSize: 12,
     textAlign: 'center',
     marginTop: 4,
   },
   practiceAnotherBtn: {
-    backgroundColor: '#6366F1',
     borderRadius: 12,
     paddingVertical: 13,
     flexDirection: 'row',
@@ -946,12 +1164,10 @@ const styles = StyleSheet.create({
   modalCard: {
     width: '100%',
     maxWidth: 360,
-    backgroundColor: '#1E293B',
     borderRadius: 22,
     padding: 24,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#334155',
   },
   modalIconCircle: {
     width: 72,
@@ -965,18 +1181,15 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#F8FAFC',
     marginBottom: 8,
   },
   modalBody: {
     fontSize: 14,
-    color: '#CBD5E1',
     textAlign: 'center',
     marginBottom: 20,
   },
   modalStatsRow: {
     flexDirection: 'row',
-    backgroundColor: '#0F172A',
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 14,
@@ -988,21 +1201,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalStatValue: {
-    color: '#F8FAFC',
     fontSize: 16,
     fontWeight: '800',
   },
   modalStatLabel: {
-    color: '#94A3B8',
     fontSize: 11,
     marginTop: 2,
   },
   modalStatDivider: {
     width: 1,
-    backgroundColor: '#334155',
   },
   modalCloseBtn: {
-    backgroundColor: '#6366F1',
     width: '100%',
     paddingVertical: 14,
     borderRadius: 12,

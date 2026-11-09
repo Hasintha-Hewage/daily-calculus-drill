@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useDrill } from '../context/DrillContext';
 
 export interface MathSymbolToken {
   label: string;
@@ -44,14 +45,22 @@ export const MathKeyboardToolbar: React.FC<MathKeyboardToolbarProps> = ({
   onClear,
   disabled = false,
 }) => {
+  const { themeColors } = useDrill();
+
   return (
     <View style={styles.wrapper}>
       <View style={styles.headerRow}>
-        <Text style={styles.toolbarLabel}>QUICK INSERT SYMBOLS</Text>
+        <Text style={[styles.toolbarLabel, { color: themeColors.textMuted }]}>
+          QUICK INSERT SYMBOLS
+        </Text>
         <TouchableOpacity
           onPress={onClear}
           disabled={disabled}
-          style={[styles.clearBtn, disabled && styles.disabledBtn]}
+          style={[
+            styles.clearBtn,
+            { backgroundColor: themeColors.card, borderColor: themeColors.border },
+            disabled && styles.disabledBtn,
+          ]}
         >
           <Text style={styles.clearBtnText}>Clear</Text>
         </TouchableOpacity>
@@ -70,7 +79,14 @@ export const MathKeyboardToolbar: React.FC<MathKeyboardToolbarProps> = ({
             onPress={() => onInsertSymbol(item.insertText)}
             style={[
               styles.chip,
-              item.highlight && styles.chipHighlight,
+              {
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+              },
+              item.highlight && {
+                backgroundColor: 'rgba(99, 102, 241, 0.16)',
+                borderColor: themeColors.primary,
+              },
               disabled && styles.disabledBtn,
             ]}
             activeOpacity={0.7}
@@ -78,7 +94,11 @@ export const MathKeyboardToolbar: React.FC<MathKeyboardToolbarProps> = ({
             <Text
               style={[
                 styles.chipText,
-                item.highlight && styles.chipTextHighlight,
+                { color: themeColors.textPrimary },
+                item.highlight && {
+                  color: themeColors.primaryText,
+                  fontWeight: '700',
+                },
               ]}
             >
               {item.label}
@@ -105,28 +125,25 @@ const styles = StyleSheet.create({
   toolbarLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#94A3B8',
     letterSpacing: 0.8,
   },
   clearBtn: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
-    backgroundColor: '#1E293B',
+    borderWidth: 1,
   },
   clearBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#F87171',
+    color: '#EF4444',
   },
   scrollContent: {
     gap: 8,
     paddingVertical: 2,
   },
   chip: {
-    backgroundColor: '#1E293B',
     borderWidth: 1,
-    borderColor: '#334155',
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 10,
@@ -134,18 +151,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  chipHighlight: {
-    backgroundColor: 'rgba(99, 102, 241, 0.18)',
-    borderColor: '#6366F1',
-  },
   chipText: {
-    color: '#E2E8F0',
     fontSize: 15,
     fontWeight: '600',
-  },
-  chipTextHighlight: {
-    color: '#818CF8',
-    fontWeight: '700',
   },
   disabledBtn: {
     opacity: 0.45,

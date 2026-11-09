@@ -23,7 +23,9 @@ import {
   updateNotificationTime,
   updateOnboardingPreference,
   updateSelectedDifficulty,
+  updateThemePreference,
 } from '../database/db';
+import { getThemePalette, ThemePalette } from '../theme/colors';
 import {
   requestNotificationPermissions,
   scheduleDailyDrillNotification,
@@ -34,6 +36,7 @@ import {
   DrillHistory,
   ProblemCategory,
   SkillDifficulty,
+  ThemeMode,
   TopicMasteryMap,
   UserProgress,
   VerificationResult,
@@ -50,6 +53,8 @@ interface SubmitOutcome {
 interface DrillContextValue {
   isLoading: boolean;
   progress: UserProgress;
+  themeMode: ThemeMode;
+  themeColors: ThemePalette;
   topicMastery: TopicMasteryMap;
   todayDrill: DrillHistory | null;
   todayProblem: CalculusProblem | null;
@@ -58,6 +63,7 @@ interface DrillContextValue {
   isHelpModalVisible: boolean;
   openHelpModal: () => void;
   closeHelpModal: (doNotShowAgain: boolean) => Promise<void>;
+  changeThemeMode: (mode: ThemeMode) => Promise<void>;
   submitAnswer: (rawInput: string) => Promise<SubmitOutcome>;
   giveUpToday: () => Promise<void>;
   retryCurrentProblem: () => Promise<void>;
@@ -80,6 +86,7 @@ const DEFAULT_PROGRESS: UserProgress = {
   skill_rating: 800,
   topic_mastery_json: JSON.stringify(DEFAULT_TOPIC_MASTERY),
   hide_onboarding_modal: 0,
+  theme_mode: 'DARK',
 };
 
 const DrillContext = createContext<DrillContextValue | undefined>(undefined);
@@ -512,18 +519,39 @@ export const DrillProvider: React.FC<{ children: React.ReactNode }> = ({
     []
   );
 
+  const changeThemeMode = useCallback(
+    async (mode: ThemeMode): Promise<void> => {
+      setProgress((prev) => ({
+        ...prev,
+        theme_mode: mode,
+      }));
+      try {
+        const updated = await updateThemePreference(mode);
+        setProgress({ ...updated });
+      } catch (err) {
+        console.warn('Could not save theme preference:', err);
+      }
+    },
+    []
+  );
+
   const resetProgressData = useCallback(async (): Promise<void> => {
     await resetAllProgress();
     await loadAndSyncDailyState();
   }, [loadAndSyncDailyState]);
 
   const topicMastery = parseTopicMastery(progress.topic_mastery_json);
+  const themeMode: ThemeMode =
+    progress.theme_mode === 'LIGHT' ? 'LIGHT' : 'DARK';
+  const themeColors = getThemePalette(themeMode);
 
   return (
     <DrillContext.Provider
       value={{
         isLoading,
         progress,
+        themeMode,
+        themeColors,
         topicMastery,
         todayDrill,
         todayProblem,
@@ -532,6 +560,7 @@ export const DrillProvider: React.FC<{ children: React.ReactNode }> = ({
         isHelpModalVisible,
         openHelpModal,
         closeHelpModal,
+        changeThemeMode,
         submitAnswer,
         giveUpToday,
         retryCurrentProblem,

@@ -11,11 +11,12 @@ import {
   DrillHistory,
   DrillStatus,
   SkillDifficulty,
+  ThemeMode,
   UserProgress,
 } from '../types';
 
 const DATABASE_NAME = 'daily_calculus_drill.db';
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 
 let dbInstance: SQLite.SQLiteDatabase | null = null;
 let appliedSchemaVersion = 0;
@@ -79,7 +80,8 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
         selected_difficulty TEXT NOT NULL DEFAULT 'BEGINNER',
         skill_rating INTEGER NOT NULL DEFAULT 800,
         topic_mastery_json TEXT NOT NULL DEFAULT '${defaultMasteryJson}',
-        hide_onboarding_modal INTEGER NOT NULL DEFAULT 0
+        hide_onboarding_modal INTEGER NOT NULL DEFAULT 0,
+        theme_mode TEXT NOT NULL DEFAULT 'DARK'
       );
 
       CREATE TABLE IF NOT EXISTS drill_history (
@@ -120,6 +122,11 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
       db,
       'user_progress',
       'hide_onboarding_modal INTEGER NOT NULL DEFAULT 0'
+    );
+    await safeAddColumn(
+      db,
+      'user_progress',
+      "theme_mode TEXT NOT NULL DEFAULT 'DARK'"
     );
     await safeAddColumn(db, 'drill_history', 'ai_reasoning TEXT');
     await safeAddColumn(db, 'drill_history', 'difficulty TEXT');
@@ -167,6 +174,7 @@ export async function getUserProgress(): Promise<UserProgress> {
       skill_rating: 800,
       topic_mastery_json: JSON.stringify(DEFAULT_TOPIC_MASTERY),
       hide_onboarding_modal: 0,
+      theme_mode: 'DARK',
     };
   }
 
@@ -182,6 +190,7 @@ export async function getUserProgress(): Promise<UserProgress> {
     topic_mastery_json:
       row.topic_mastery_json || JSON.stringify(DEFAULT_TOPIC_MASTERY),
     hide_onboarding_modal: Number(row.hide_onboarding_modal ?? 0),
+    theme_mode: (row.theme_mode as ThemeMode) === 'LIGHT' ? 'LIGHT' : 'DARK',
   };
 }
 
@@ -573,6 +582,22 @@ export async function updateOnboardingPreference(
      SET hide_onboarding_modal = ?
      WHERE id = 1;`,
     [hideModal ? 1 : 0]
+  );
+  return await getUserProgress();
+}
+
+/**
+ * Updates the user's preferred theme mode ('DARK' or 'LIGHT') in SQLite.
+ */
+export async function updateThemePreference(
+  themeMode: ThemeMode
+): Promise<UserProgress> {
+  const db = await getDatabase();
+  await db.runAsync(
+    `UPDATE user_progress
+     SET theme_mode = ?
+     WHERE id = 1;`,
+    [themeMode]
   );
   return await getUserProgress();
 }

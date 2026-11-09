@@ -12,7 +12,7 @@ import { getLocalDateString } from '../database/db';
 import { DrillHistory } from '../types';
 
 export const HistoryScreen: React.FC = () => {
-  const { history, progress } = useDrill();
+  const { history, progress, themeColors } = useDrill();
 
   const stats = useMemo(() => {
     const solvedCount = history.filter((item) => item.status === 'SOLVED').length;
@@ -63,8 +63,8 @@ export const HistoryScreen: React.FC = () => {
     if (status === 'SOLVED') {
       return (
         <View style={[styles.statusBadge, styles.badgeSolved]}>
-          <Ionicons name="checkmark-circle" size={14} color="#34D399" />
-          <Text style={[styles.statusBadgeText, { color: '#34D399' }]}>
+          <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+          <Text style={[styles.statusBadgeText, { color: '#10B981' }]}>
             SOLVED
           </Text>
         </View>
@@ -73,8 +73,8 @@ export const HistoryScreen: React.FC = () => {
     if (status === 'FAILED' || status === 'SKIPPED') {
       return (
         <View style={[styles.statusBadge, styles.badgeFailed]}>
-          <Ionicons name="close-circle" size={14} color="#F87171" />
-          <Text style={[styles.statusBadgeText, { color: '#F87171' }]}>
+          <Ionicons name="close-circle" size={14} color="#EF4444" />
+          <Text style={[styles.statusBadgeText, { color: '#EF4444' }]}>
             {status}
           </Text>
         </View>
@@ -82,8 +82,8 @@ export const HistoryScreen: React.FC = () => {
     }
     return (
       <View style={[styles.statusBadge, styles.badgePending]}>
-        <Ionicons name="hourglass-outline" size={14} color="#FBBF24" />
-        <Text style={[styles.statusBadgeText, { color: '#FBBF24' }]}>
+        <Ionicons name="hourglass-outline" size={14} color="#F59E0B" />
+        <Text style={[styles.statusBadgeText, { color: '#F59E0B' }]}>
           IN PROGRESS
         </Text>
       </View>
@@ -91,22 +91,52 @@ export const HistoryScreen: React.FC = () => {
   };
 
   const renderHistoryItem = ({ item }: { item: DrillHistory }) => (
-    <View style={styles.card}>
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: themeColors.card,
+          borderColor: themeColors.border,
+        },
+      ]}
+    >
       <View style={styles.cardTopRow}>
         <View style={styles.dateLevelWrap}>
-          <Text style={styles.cardDate}>{item.date}</Text>
-          <View style={styles.levelPill}>
-            <Text style={styles.levelPillText}>Level {item.level}</Text>
+          <Text style={[styles.cardDate, { color: themeColors.textPrimary }]}>
+            {item.date}
+          </Text>
+          <View
+            style={[
+              styles.levelPill,
+              {
+                backgroundColor: themeColors.innerBox,
+                borderColor: themeColors.border,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.levelPillText,
+                { color: themeColors.primaryText },
+              ]}
+            >
+              Level {item.level}
+            </Text>
           </View>
         </View>
         {renderBadge(item.status)}
       </View>
 
-      <View style={styles.equationContainer}>
+      <View
+        style={[
+          styles.equationContainer,
+          { backgroundColor: themeColors.innerBox },
+        ]}
+      >
         <MathRenderer
           latex={item.problem_latex}
           fontSize={20}
-          color="#F8FAFC"
+          color={themeColors.mathText}
           height={62}
           compact
         />
@@ -114,20 +144,44 @@ export const HistoryScreen: React.FC = () => {
 
       <View style={styles.cardFooter}>
         <View style={styles.answerCol}>
-          <Text style={styles.footerLabel}>
-            Target: <Text style={styles.footerValue}>{item.correct_answer}</Text>
+          <Text style={[styles.footerLabel, { color: themeColors.textMuted }]}>
+            Target:{' '}
+            <Text
+              style={[
+                styles.footerValue,
+                { color: themeColors.textSecondary },
+              ]}
+            >
+              {item.correct_answer}
+            </Text>
           </Text>
           {item.user_answer ? (
-            <Text style={styles.footerLabel}>
+            <Text style={[styles.footerLabel, { color: themeColors.textMuted }]}>
               Your Input:{' '}
-              <Text style={styles.footerValue}>{item.user_answer}</Text>
+              <Text
+                style={[
+                  styles.footerValue,
+                  { color: themeColors.textSecondary },
+                ]}
+              >
+                {item.user_answer}
+              </Text>
             </Text>
           ) : null}
         </View>
 
-        <View style={styles.timeBox}>
-          <Ionicons name="timer-outline" size={14} color="#94A3B8" />
-          <Text style={styles.timeText}>
+        <View
+          style={[
+            styles.timeBox,
+            { backgroundColor: themeColors.innerBox },
+          ]}
+        >
+          <Ionicons
+            name="timer-outline"
+            size={14}
+            color={themeColors.textMuted}
+          />
+          <Text style={[styles.timeText, { color: themeColors.textSecondary }]}>
             {formatTimeTaken(item.duration_seconds)}
           </Text>
         </View>
@@ -136,7 +190,9 @@ export const HistoryScreen: React.FC = () => {
   );
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[styles.container, { backgroundColor: themeColors.background }]}
+    >
       <FlatList
         data={history}
         keyExtractor={(item) => String(item.id)}
@@ -145,23 +201,101 @@ export const HistoryScreen: React.FC = () => {
           <View>
             {/* Top Summary Metrics */}
             <View style={styles.summaryRow}>
-              <View style={styles.summaryCard}>
-                <Text style={styles.summaryValue}>{stats.solvedCount}</Text>
-                <Text style={styles.summaryLabel}>Solved</Text>
+              <View
+                style={[
+                  styles.summaryCard,
+                  {
+                    backgroundColor: themeColors.card,
+                    borderColor: themeColors.border,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.summaryValue,
+                    { color: themeColors.textPrimary },
+                  ]}
+                >
+                  {stats.solvedCount}
+                </Text>
+                <Text
+                  style={[
+                    styles.summaryLabel,
+                    { color: themeColors.textMuted },
+                  ]}
+                >
+                  Solved
+                </Text>
               </View>
-              <View style={styles.summaryCard}>
-                <Text style={styles.summaryValue}>{stats.accuracy}%</Text>
-                <Text style={styles.summaryLabel}>Solve Rate</Text>
+              <View
+                style={[
+                  styles.summaryCard,
+                  {
+                    backgroundColor: themeColors.card,
+                    borderColor: themeColors.border,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.summaryValue,
+                    { color: themeColors.textPrimary },
+                  ]}
+                >
+                  {stats.accuracy}%
+                </Text>
+                <Text
+                  style={[
+                    styles.summaryLabel,
+                    { color: themeColors.textMuted },
+                  ]}
+                >
+                  Solve Rate
+                </Text>
               </View>
-              <View style={styles.summaryCard}>
-                <Text style={styles.summaryValue}>{progress.streak} 🔥</Text>
-                <Text style={styles.summaryLabel}>Streak</Text>
+              <View
+                style={[
+                  styles.summaryCard,
+                  {
+                    backgroundColor: themeColors.card,
+                    borderColor: themeColors.border,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.summaryValue,
+                    { color: themeColors.textPrimary },
+                  ]}
+                >
+                  {progress.streak} 🔥
+                </Text>
+                <Text
+                  style={[
+                    styles.summaryLabel,
+                    { color: themeColors.textMuted },
+                  ]}
+                >
+                  Streak
+                </Text>
               </View>
             </View>
 
             {/* 14-Day Calendar Activity Strip */}
-            <View style={styles.calendarCard}>
-              <Text style={styles.sectionTitle}>LAST 14 DAYS</Text>
+            <View
+              style={[
+                styles.calendarCard,
+                {
+                  backgroundColor: themeColors.card,
+                  borderColor: themeColors.border,
+                },
+              ]}
+            >
+              <Text
+                style={[styles.sectionTitle, { color: themeColors.textMuted }]}
+              >
+                LAST 14 DAYS
+              </Text>
               <View style={styles.calendarGrid}>
                 {recentCalendarDays.map((day) => {
                   const isSolved = day.status === 'SOLVED';
@@ -173,26 +307,47 @@ export const HistoryScreen: React.FC = () => {
                       key={day.dateStr}
                       style={[
                         styles.calendarCell,
+                        {
+                          backgroundColor: themeColors.innerBox,
+                          borderColor: themeColors.border,
+                        },
                         isSolved && styles.calendarCellSolved,
                         isFailed && styles.calendarCellFailed,
                         isPending && styles.calendarCellPending,
                       ]}
                     >
-                      <Text style={styles.calendarDayText}>{day.dayLabel}</Text>
+                      <Text
+                        style={[
+                          styles.calendarDayText,
+                          { color: themeColors.textPrimary },
+                        ]}
+                      >
+                        {day.dayLabel}
+                      </Text>
                     </View>
                   );
                 })}
               </View>
             </View>
 
-            <Text style={styles.sectionTitle}>CHRONOLOGICAL LOG</Text>
+            <Text
+              style={[styles.sectionTitle, { color: themeColors.textMuted }]}
+            >
+              CHRONOLOGICAL LOG
+            </Text>
           </View>
         }
         renderItem={renderHistoryItem}
         ListEmptyComponent={
           <View style={styles.emptyBox}>
-            <Ionicons name="calendar-outline" size={40} color="#475569" />
-            <Text style={styles.emptyText}>No calculus drills recorded yet.</Text>
+            <Ionicons
+              name="calendar-outline"
+              size={40}
+              color={themeColors.textMuted}
+            />
+            <Text style={[styles.emptyText, { color: themeColors.textMuted }]}>
+              No calculus drills recorded yet.
+            </Text>
           </View>
         }
       />
@@ -203,7 +358,6 @@ export const HistoryScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
   },
   listContent: {
     padding: 20,
@@ -216,36 +370,29 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     flex: 1,
-    backgroundColor: '#1E293B',
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#334155',
   },
   summaryValue: {
-    color: '#F8FAFC',
     fontSize: 20,
     fontWeight: '800',
   },
   summaryLabel: {
-    color: '#94A3B8',
     fontSize: 12,
     marginTop: 4,
     fontWeight: '600',
   },
   calendarCard: {
-    backgroundColor: '#1E293B',
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#334155',
     marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#94A3B8',
     letterSpacing: 0.8,
     marginBottom: 10,
   },
@@ -259,9 +406,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 8,
-    backgroundColor: '#0F172A',
     borderWidth: 1,
-    borderColor: '#334155',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -278,17 +423,14 @@ const styles = StyleSheet.create({
     borderColor: '#F59E0B',
   },
   calendarDayText: {
-    color: '#E2E8F0',
     fontSize: 12,
     fontWeight: '700',
   },
   card: {
-    backgroundColor: '#1E293B',
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#334155',
   },
   cardTopRow: {
     flexDirection: 'row',
@@ -302,20 +444,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cardDate: {
-    color: '#F8FAFC',
     fontSize: 14,
     fontWeight: '700',
   },
   levelPill: {
-    backgroundColor: '#0F172A',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#334155',
   },
   levelPillText: {
-    color: '#818CF8',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -346,7 +484,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   equationContainer: {
-    backgroundColor: '#0F172A',
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -362,24 +499,20 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   footerLabel: {
-    color: '#94A3B8',
     fontSize: 12,
   },
   footerValue: {
-    color: '#E2E8F0',
     fontWeight: '600',
   },
   timeBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#0F172A',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
   },
   timeText: {
-    color: '#CBD5E1',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -388,7 +521,6 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   emptyText: {
-    color: '#64748B',
     marginTop: 10,
     fontSize: 14,
   },
